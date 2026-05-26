@@ -11,7 +11,6 @@ Description: util class handling file io
 import os
 import webbrowser
 from tkinter import filedialog
-import openpyxl
 import xmltodict
 import utility_modules as um
 import csv
@@ -56,35 +55,6 @@ class FileHelper:
         out_file.write(contents)
         out_file.close()
 
-    def write_to_specific_excel_file(self, stack_dict, new_file_path, template_location):
-        """
-        Open file path and write contents:
-        path: path to file
-        """
-
-        srcfile = openpyxl.load_workbook(template_location, read_only=False, keep_vba=True)
-
-        stack_keys = list(stack_dict.keys())
-        if len(stack_keys):
-            interior_keys = list(stack_dict[stack_keys[0]].keys())
-            for s in stack_keys:                                        # once for each stack |6|
-                sheet_name = srcfile.get_sheet_by_name(self.sheets[s])
-                for r in range(len(stack_dict[s][interior_keys[0]])):   # pick length of one of the arrays |30|
-                    for c in range(len(interior_keys)):                 # once for each calPair |5|
-                        # now go through each array and write out each line in order
-                        sheet_name.cell(row=2+r, column=2+c).value = stack_dict[s][interior_keys[c]][r]
-        else:
-            return False
-
-        try:
-            if os.path.isfile(new_file_path):   # check if file exists and is open
-                open(new_file_path, 'r+')
-        except IOError as e:
-            print(repr(e))
-            return False
-        else:
-            srcfile.save(new_file_path)  # save it as a new file
-            return True
 
     @staticmethod
     def verify_export_dir(directory):

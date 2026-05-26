@@ -12,23 +12,21 @@ import tkinter as tk
 
 class SuperTk:
     def __init__(self):
-
         self.opacity = 0.90
         self.bg = 'black'
-        self.fg = 'lime'
-
+        self.fg = "#00FF00"
+        self.padx = 10
+        self.pady = 10
         self.tk = tk
         self.ttk = ttk
+        self.id_counter = 1
+        self.invoked = {}
 
         self.window = None
         self.scroll_area = None
         self.scrollbar = None
         self.canvas = None
         self.canvas_frame = None
-        self.padx = 10
-        self.pady = 10
-        self.invoked = {}
-        self.id_counter = 0
 
         self._initialized = False
 
@@ -119,7 +117,7 @@ class SuperTk:
             'window': self.window,
             'scroll_area': self.scroll_area
         }
-
+        
     def get_label(self, text=None, bg=None, fg=None, width=None, append_to=None, str_var=None):
         """
         Creates and returns label
@@ -142,6 +140,7 @@ class SuperTk:
         """
         Creates and returns string variable for ui access
         """
+
         self.str_var = self.tk.StringVar()
         return self.store(self.str_var, 'strvar')
 
@@ -332,6 +331,6 @@ class SuperTk:
             self.opacity = 1
 
         else:
-            self.fg = 'lime'
+            self.fg = "#00FF00"
             self.bg = 'black'
             self.opacity = 0.90

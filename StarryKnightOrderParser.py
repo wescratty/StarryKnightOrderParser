@@ -181,7 +181,7 @@ class OrderParser:
         else:
             self.tk.get_label(message, append_to=self.scroll_area, fg=fg, str_var=self.tk.get_str_var())\
                 .pack(anchor='w')
-        self.tk.scroll_bottom(self.show_html_nav)
+        #self.tk.scroll_bottom(self.show_html_nav)
 
     def main(self):
         """
