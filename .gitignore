@@ -1,0 +1,28 @@
+# Ignore
+*__pycache__/
+*.py[cod]
+
+*.pyc
+
+# Virtual environment
+venv/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# macOS
+.DS_Store
+
+# User data
+config/
+INPUT_CSV/
+OUTPUT_HTML/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
