@@ -1,6 +1,7 @@
 from collections import defaultdict
 import webbrowser
 import os
+import config
 
 
 TABLE_HEADERS = [
@@ -83,6 +84,11 @@ def get_table_category(order):
 # ----------------------------------------
 
 def export_orders_html(orders, filename="orders.html"):
+    output_file = config.get_output_file(filename)
+
+    if not output_file:
+        print("No output path configured.")
+        return
 
     # rows[size][category] = list of order objects
     rows = defaultdict(lambda: defaultdict(list))
@@ -279,11 +285,12 @@ def export_orders_html(orders, filename="orders.html"):
     # write file
     # ----------------------------------------
 
-    with open(filename, "w", encoding="utf-8") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
+
         f.write(html)
 
     # ----------------------------------------
     # open in browser
     # ----------------------------------------
 
-    webbrowser.open("file://" + os.path.realpath(filename))
+    webbrowser.open(output_file.as_uri())

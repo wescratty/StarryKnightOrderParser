@@ -1,12 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 import re
-from datetime import datetime
-import os
-from pathlib import Path
+import config
 
-APP_ROOT = Path.cwd()
-PROCESSED_FILE = "processed_orders.txt"
 # ----------------------------------------
 # master color list
 # easy to extend later
@@ -140,48 +136,6 @@ class ParseEvent:
     timestamp: Optional[str] = None
 
 
-def clean_timestamp(ts):
-
-    # remove timezone suffix
-    # "2026-05-08 10:58:11 -0600"
-    # ->
-    # "2026-05-08 10:58:11"
-
-    return ts.split(" -")[0]
-
-
-def timestamp_to_datetime(ts):
-
-    cleaned = clean_timestamp(ts)
-
-    return datetime.strptime(
-        cleaned,
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-
-def load_last_processed_timestamp():
-
-    if not os.path.exists(PROCESSED_FILE):
-        return None
-
-    with open(PROCESSED_FILE, "r") as f:
-
-        text = f.read().strip()
-
-        if not text:
-            return None
-
-        return timestamp_to_datetime(text)
-
-
-def save_last_processed_timestamp(ts):
-
-    cleaned = clean_timestamp(ts)
-
-    with open(PROCESSED_FILE, "w") as f:
-        f.write(cleaned)
-
 # ----------------------------------------
 # order object
 # ----------------------------------------
@@ -234,7 +188,7 @@ class OrderItem:
 def extract_varient(text):
 
     found = []
-    colors = load_colors()
+    colors = get_colors()
 
     lower = text.lower()
 
@@ -250,26 +204,13 @@ def extract_varient(text):
     return list(set(found))
 
 
-def load_colors():
+def get_colors():
 
-    path = APP_ROOT / "config" / "colors.txt"
-
-    colors = []
-
-    with open(path, "r", encoding="utf-8") as f:
-
-        for line in f:
-
-            line = line.strip().lower()
-
-            if line:
-                colors.append(line)
-
-    return sorted(colors, key=len, reverse=True)
+    return config.load_colors()
 
 
 def extract_colors(text):
-    colors = load_colors()
+    colors = get_colors()
     found = []
 
     lower = text.lower()
@@ -293,7 +234,7 @@ def extract_colors(text):
 
 def extract_display_text(main_text, colors=None, variant_display=None):
 
-    COLORS = load_colors()
+    COLORS = get_colors()
     # everything before size block already removed
     left = main_text
 
@@ -463,7 +404,7 @@ def parse_orders(
     orders = []
     events = []
 
-    last_processed = load_last_processed_timestamp()
+    last_processed = config.load_last_processed_timestamp()
 
     newest_timestamp = None
 
@@ -495,7 +436,7 @@ def parse_orders(
 
         if ts and not DEBUG:
 
-            current_dt = timestamp_to_datetime(ts)
+            current_dt = config.timestamp_to_datetime(ts)
 
             if last_processed and current_dt <= last_processed:
                 events.append(ParseEvent(
@@ -529,7 +470,7 @@ def parse_orders(
 
     if newest_timestamp:
 
-        save_last_processed_timestamp(
+        config.save_last_processed_timestamp(
             newest_timestamp.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )

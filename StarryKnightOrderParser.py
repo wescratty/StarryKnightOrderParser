@@ -25,19 +25,20 @@ class OrderParser:
     """
     def __init__(self):
         self.show_html_nav = True  # change to True if wish to display html creation navigator
-        self.geometry = '600x500'
+        self.geometry = '600x600'
         if not self.show_html_nav:
             self.geometry = '600x500'
 
         self.ask_file = filedialog.askopenfile
         self.file = um.fh()
         self.tk = um.stk()
-        self.travers = um.t()
         self.html = um.html()
         win_obj = self.tk.get_window(title='Order Organizer', geometry=self.geometry, scroll=self.show_html_nav)
         self.window = win_obj['window']
         self.scroll_area = win_obj['scroll_area']
         self.path_label = None
+        self.path_set = False
+        self.workspace_path = None
         self.user_label = None
         self.search_label = None
         self.var_info_label = None
@@ -52,6 +53,7 @@ class OrderParser:
         self.paths_that_end_with = list()
         self.cal_pairs_array = list()
         self.root = ''
+        self.config_path = ''
         self.data_table = None
         self.xml_path = None
         self.num_dirs_to_show = -3  # save the last three items in the path to concatenate to the new path
@@ -72,6 +74,16 @@ class OrderParser:
         self.tree = dict()
         self.branch = dict()
 
+    def set_config_directory(self, btn_n):
+        """
+        """
+
+        self.workspace_path = self.file.find_config_dir()
+        self.display_label_to_user(message=self.workspace_path, urgency=2, reuse_lower_label=False)
+        config.set_workspace_path(self.workspace_path)
+        config.load_paths()
+        config.initialize_app()
+
     def csv(self, btn_n):
         """
         CSV Button handler
@@ -87,7 +99,7 @@ class OrderParser:
             text = self.search_text.get() if search else self.default_search_str
             print('searching for ', text)
             self.re_init()
-            path = self.file.find_file_ends_with(text)
+            path = self.file.find_file()
             if path != '':
                 self.paths_that_end_with.append(path)
                 self.display_label_to_user(self.paths_that_end_with[0], 2, False)
@@ -190,8 +202,20 @@ class OrderParser:
         Adds button field sets
         """
         config.initialize_app()
-        self.display_label_to_user('Navigate to your Active directory containing orders_export.csv file and press the Export Data button',
+        self.display_label_to_user('Navigate to your Active directory containing orders_export.csv file and press the'
+                                   ' Export Data button',
                                    1, False)
+        self.path_set = config.workspace_exists()
+        if not self.path_set:
+            self.tk.add_frame('Config Path', ['Set Config directory'],
+                              self.set_config_directory, self.window, self.show_html_nav)
+            self.display_label_to_user('Please select a configuration directory, anywhere you want to save orders to. '
+                                       'Press Config Directory', 3, False)
+        else:
+            self.workspace_path = config.get_workspace_path()
+            self.display_label_to_user('Please select a directory: '
+                                       'Press Find a File', 2, False)
+
         self.tk.add_frame('CSV', ['Find a File', 'Export Data'],
                           self.csv, self.window, self.show_html_nav)
 

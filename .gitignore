@@ -19,7 +19,7 @@ dist/
 config/
 INPUT_CSV/
 OUTPUT_HTML/
-
+processed_orders.txt
 # IDE
 .vscode/
 .idea/
