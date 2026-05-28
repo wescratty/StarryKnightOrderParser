@@ -13,7 +13,7 @@ import tkinter as tk
 class SuperTk:
     def __init__(self):
         self.opacity = 0.90
-        self.bg = 'black'
+        self.bg = '#000000'
         self.fg = "#00FF00"
         self.padx = 10
         self.pady = 10
@@ -246,8 +246,8 @@ class SuperTk:
             text=name,
             width=45,
             height=2,
-            bg='#808080',
-            fg=self.fg,
+            bg=self.bg,
+            fg="#000000",
             command=func
         ), 'button')
 
@@ -335,8 +335,12 @@ class SuperTk:
             self.fg = 'black'
             self.bg = 'white'
             self.opacity = 1
+            print("theme 0")
+
 
         else:
             self.fg = "#00FF00"
-            self.bg = 'black'
+            self.bg = '#000000'
             self.opacity = 0.90
+            print("theme 1")
+

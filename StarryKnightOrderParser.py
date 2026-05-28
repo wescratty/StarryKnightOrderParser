@@ -243,6 +243,8 @@ class OrderParser:
         Adds button field sets
         """
         config.initialize_app()
+        self.tk.set_theme(1)
+
 
         self.path_set = config.workspace_exists()
         if not self.path_set:
@@ -309,6 +311,7 @@ class OrderParser:
             "write",
             self.on_change
         )
+
         self.window.mainloop()
 
 
