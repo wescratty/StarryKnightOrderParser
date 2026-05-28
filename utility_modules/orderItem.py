@@ -2,6 +2,28 @@ from dataclasses import dataclass, field
 from typing import Optional
 import re
 import config
+from enum import Enum
+
+
+addonList = list()
+
+
+class AddonType(Enum):
+
+    WOOL = "wool"
+    SOLE = "sole"
+    GIFT = "gift"
+    UNKNOWN = "unknown"
+
+
+ADDON_TYPE_MAP = {
+
+    "Natural Wool Insert": AddonType.WOOL,
+
+    "Big Runner": AddonType.SOLE,
+
+    "Gift Card": AddonType.GIFT,
+}
 
 # ----------------------------------------
 # master color list
@@ -10,47 +32,6 @@ import config
 
 # Get Notes and highlight if note
 DEBUG = False
-# COLORS = [
-#
-#     "barley",
-#     "beige",
-#     "big sky",
-#     "black",
-#     "camel",
-#     "caramel",
-#     "carob",
-#     "chai",
-#     "chestnut",
-#     "cream",
-#     "daffodil",
-#     "dusty rose",
-#     "flax",
-#     "gray",
-#     "grey",
-#     "honey",
-#     "iron",
-#     "latte",
-#     "lichen",
-#     "milk",
-#     "navy",
-#     "oat",
-#     "oyster",
-#     "papaya",
-#     "pink",
-#     "platinum",
-#     "rose blush",
-#     "russet",
-#     "rust",
-#     "sable",
-#     "saddle",
-#     "sahara",
-#     "sepia",
-#     "sienna",
-#     "tan",
-#     "tumbleweed",
-#     "white",
-#     "wood",
-# ]
 
 # ----------------------------------------
 # words that do not matter operationally
@@ -65,44 +46,6 @@ IGNORE_LOCATION = {
     "(middle)",
     "(left)",
     "(right)",
-}
-
-IGNORE_WORDS = {
-
-    "baby",
-    "toddler",
-    "and",
-    "shoes",
-    "shoe",
-    "leather",
-    "cute",
-    "moccs",
-    "mocc",
-    "loafer",
-    "loafers",
-    "jane",
-    "janes",
-    "sunrise",
-    "bella",
-    "rainey",
-    "strap",
-    "t",
-    "lotus",
-    "daisy",
-    "critters",
-    "scout",
-    "sequoia",
-    "mary",
-    "booties",
-    "sandals",
-    "headband",
-    "two",
-    "tone",
-    "pick",
-    "your",
-    "color",
-    "//",
-    "&",
 }
 
 
@@ -139,6 +82,20 @@ class ParseEvent:
 # ----------------------------------------
 # order object
 # ----------------------------------------
+@dataclass()
+class Addon:
+    timeStamp: str
+    original_order_string: str
+    quantity: Optional[str] = None
+    note: Optional[str] = None
+    orderNum: Optional[str] = None
+    category: Optional[str] = None
+
+    type = AddonType.UNKNOWN
+    description = None
+    icon = None
+    color = None
+    display_text: Optional[str] = None
 
 
 @dataclass
@@ -149,6 +106,7 @@ class OrderItem:
 
     # untouched original order string
     original_order_string: str
+    addOns: list["Addon"] = field(default_factory=list)
 
     # order number
     orderNum: Optional[str] = None
@@ -177,13 +135,173 @@ class OrderItem:
     # multiple colors possible
     colors: list = field(default_factory=list)
 
-    is_addon: bool = False
-    is_gift_card: bool = False
 
+def classify_addon(item):
+    if not isinstance(item, Addon):
+        return
+
+    # ----------------------------------------
+    # wool insert
+    # ----------------------------------------
+
+    if item.type == AddonType.WOOL:
+
+        item.icon = "🐑"
+
+    # ----------------------------------------
+    # rubber sole
+    # ----------------------------------------
+
+    elif item.type == AddonType.SOLE:
+
+        item.icon = "👟"
+
+        if " - " in item.description:
+
+            item.color = (
+                item.description
+                .split(" - ")[-1]
+                .strip()
+                .title()
+            )
+
+    # ----------------------------------------
+    # fallback
+    # ----------------------------------------
+
+    else:
+
+        item.icon = "➕"
+        item.type = AddonType.UNKNOWN
+
+
+def parse_gift_card(item, text):
+
+    if "gift card" not in text.lower():
+        return
+
+    item.description = text
+    item.icon = "💳"
+    item.type = AddonType.GIFT
+
+
+def extract_big_runner_color(text):
+
+    marker = "Big Runner"
+
+    if marker not in text:
+        return None
+
+    color = text.split(marker)[0].strip()
+
+    if not color:
+        return None
+
+    return color.title()
+
+
+# def detect_special_item(item, text):
+#
+#     lower = text.lower()
+#
+#     # ----------------------------------------
+#     # structured ADD// addons
+#     # ----------------------------------------
+#     if text.startswith("ADD//"):
+#
+#         parse_addon(item, text)
+#
+#     # ----------------------------------------
+#     # embedded sole addon
+#     # ----------------------------------------
+#
+#     elif "big runner add to men's" in lower:
+#
+#         item.is_addon = True
+#
+#         item.addon_type = AddonType.SOLE
+#
+#         item.addon_description = text
+#         item.colors = [extract_big_runner_color(text)]
+#
+#     # ----------------------------------------
+#     # gift cards
+#     # ----------------------------------------
+#
+#     if "gift card" in lower:
+#
+#         parse_gift_card(item, text)
+
+
+def get_order_item(text, timeStamp, quantity=None, note=None, orderNum=None):
+    return OrderItem(
+        timeStamp=timeStamp,
+        original_order_string=text,
+        quantity=quantity,
+        note=note,
+        orderNum=orderNum
+    )
+
+
+def get_add_on_item(text, timeStamp, quantity=None, note=None, orderNum=None):
+    return Addon(
+        timeStamp=timeStamp,
+        original_order_string=text,
+        display_text=text,
+        quantity=quantity,
+        note=note,
+        orderNum=orderNum
+    )
+
+
+def detect_class(text, timeStamp, quantity=None, note=None, orderNum=None):
+    lower = text.lower()
+
+    if text.startswith("ADD//"):
+        item = get_add_on_item(text, timeStamp, quantity, note, orderNum)
+        parse_addon(item, text)
+        classify_addon(item)
+
+        # detect_special_item(item, text)
+
+    elif "big runner add to men's" in lower:
+        item = get_add_on_item(text, timeStamp, quantity, note, orderNum)
+        item.type = AddonType.SOLE
+        item.description = text
+        item.display_text = text
+        item.icon = "👟"
+        item.color = extract_big_runner_color(text)
+        item.note = note
+
+    elif "gift card" in lower:
+        item = get_add_on_item(text, timeStamp, quantity, note, orderNum)
+        parse_gift_card(item, text)
+    else:
+        item = get_order_item(text, timeStamp, quantity, note, orderNum)
+
+    return item
+
+
+def parse_addon(item, text):
+    parts = text.split("//")
+    if len(parts) < 3:
+        return
+
+    raw_type = parts[1].strip()
+
+    item.type = ADDON_TYPE_MAP.get(
+        raw_type,
+        AddonType.UNKNOWN
+    )
+
+    description = parts[2].strip()
+    item.description = description
+    item.display_text = text
 
 # ----------------------------------------
 # color extraction
 # ----------------------------------------
+
 
 def extract_varient(text):
 
@@ -207,6 +325,11 @@ def extract_varient(text):
 def get_colors():
 
     return config.load_colors()
+
+
+def get_ignore_words():
+
+    return config.load_ignore_words()
 
 
 def extract_colors(text):
@@ -235,6 +358,7 @@ def extract_colors(text):
 def extract_display_text(main_text, colors=None, variant_display=None):
 
     COLORS = get_colors()
+    IGNORE_WORDS = get_ignore_words()
     # everything before size block already removed
     left = main_text
 
@@ -282,23 +406,10 @@ def parse_order_item(
     orderNum=None
 ):
 
-    item = OrderItem(
-        timeStamp=timeStamp,
-        original_order_string=text,
-        quantity=quantity,
-        note=note,
-        orderNum=orderNum
-    )
+    item = detect_class(text, timeStamp, quantity, note, orderNum)
+    if isinstance(item, Addon):
+        return item
 
-    # --------------------------
-    # flags
-    # --------------------------
-
-    if text.startswith("ADD//"):
-        item.is_addon = True
-
-    if "Gift card" in text:
-        item.is_gift_card = True
 
     # --------------------------
     # colors
@@ -453,24 +564,30 @@ def parse_orders(
                 current_dt > newest_timestamp
             ):
                 newest_timestamp = current_dt
-
-        orders.append(
-            parse_order_item(
+        item = parse_order_item(
                 text=text,
                 timeStamp=ts,
                 quantity=quantity,
                 note=note,
                 orderNum=order_num
             )
-        )
 
+        if isinstance(item, Addon):
+            addonList.append(item)
+        elif isinstance(item, OrderItem):
+            orders.append(item)
+
+    for addon in addonList:
+        for item in orders:
+            if item.orderNum == addon.orderNum:
+                item.addOns.append(addon)
     # ----------------------------------------
     # save newest processed timestamp
     # ----------------------------------------
 
     if newest_timestamp:
 
-        config.save_last_processed_timestamp(
+        config.set_last_processed_timestamp(
             newest_timestamp.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )

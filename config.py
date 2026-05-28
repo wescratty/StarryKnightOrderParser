@@ -1,5 +1,6 @@
-from pathlib import Path
 import sys
+from pathlib import Path
+import shutil
 from datetime import datetime
 
 
@@ -19,10 +20,28 @@ LOG_DIR = None
 COLORS_FILE = None
 IGNORE_WORDS_FILE = None
 PROCESSED_FILE = None
+processed_time_stamp = None
+
+# ----------------------------------------
+# bootstrap file
+# ----------------------------------------
+BOOTSTRAP_FILE = Path.home() / ".starry_knight_workspace"
 
 # ----------------------------------------
 # timestamp helpers
 # ----------------------------------------
+
+
+# ----------------------------------------
+# runtime state
+# ----------------------------------------
+
+
+# ----------------------------------------
+# timestamp helpers
+# ----------------------------------------
+
+TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def clean_timestamp(ts):
@@ -41,16 +60,52 @@ def clean_timestamp(ts):
     return ts.split(" -")[0].strip()
 
 
-def timestamp_to_datetime(ts):
+def validate_timestamp(ts):
 
     cleaned = clean_timestamp(ts)
 
     if not cleaned:
+
+        return {
+            "success": False,
+            "message": "Timestamp is empty."
+        }
+
+    try:
+
+        datetime.strptime(
+            cleaned,
+            TIMESTAMP_FORMAT
+        )
+
+    except ValueError:
+
+        return {
+            "success": False,
+            "message": (
+                "Invalid timestamp format.\n"
+                "Expected: YYYY-MM-DD HH:MM:SS"
+            )
+        }
+
+    return {
+        "success": True,
+        "message": "Timestamp valid."
+    }
+
+
+def timestamp_to_datetime(ts):
+
+    cleaned = clean_timestamp(ts)
+
+    validation = validate_timestamp(cleaned)
+
+    if not validation["success"]:
         return None
 
     return datetime.strptime(
         cleaned,
-        "%Y-%m-%d %H:%M:%S"
+        TIMESTAMP_FORMAT
     )
 
 
@@ -60,10 +115,15 @@ def timestamp_to_datetime(ts):
 
 def load_last_processed_timestamp():
 
+    global processed_time_stamp
+
     if not PROCESSED_FILE:
         return None
 
     if not PROCESSED_FILE.exists():
+
+        processed_time_stamp = None
+
         return None
 
     with open(PROCESSED_FILE, "r", encoding="utf-8") as f:
@@ -71,15 +131,32 @@ def load_last_processed_timestamp():
         text = f.read().strip()
 
     if not text:
+
+        processed_time_stamp = None
+
         return None
 
-    return timestamp_to_datetime(text)
+    processed_time_stamp = timestamp_to_datetime(text)
+
+    return processed_time_stamp
 
 
-def save_last_processed_timestamp(ts):
+def get_last_processed_timestamp():
 
-    if not PROCESSED_FILE:
-        return
+    global processed_time_stamp
+
+    return processed_time_stamp
+
+
+def set_last_processed_timestamp(ts):
+
+    global processed_time_stamp
+
+    validation = validate_timestamp(ts)
+
+    if not validation["success"]:
+
+        return validation
 
     cleaned = clean_timestamp(ts)
 
@@ -87,18 +164,95 @@ def save_last_processed_timestamp(ts):
 
         f.write(cleaned)
 
+    processed_time_stamp = timestamp_to_datetime(cleaned)
+
     print(f"Saved processed timestamp: {cleaned}")
-# ----------------------------------------
-# bootstrap file
-# ----------------------------------------
+
+    return {
+        "success": True,
+        "message": "Timestamp saved."
+    }
 
 
-BOOTSTRAP_FILE = Path.home() / ".starry_knight_workspace"
+def archive_csv_file(path):
+    """
+    Moves a processed CSV from ACTIVE → ARCHIVE
+    """
 
+    path = Path(path)
+
+    if not path.exists():
+        return {
+            "success": False,
+            "message": f"File not found: {path}"
+        }
+
+    if not ACTIVE_DIR or not ARCHIVE_DIR:
+        return {
+            "success": False,
+            "message": "Directories not initialized"
+        }
+
+    ensure_directory(ARCHIVE_DIR)
+
+    # ----------------------------------------
+    # create unique archive filename
+    # ----------------------------------------
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    target = ARCHIVE_DIR / f"{path.stem}_{timestamp}{path.suffix}"
+
+    try:
+        shutil.move(str(path), str(target))
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    return {
+        "success": True,
+        "message": f"Archived to {target}",
+        "path": target
+    }
+
+def get_last_processed_timestamp_string():
+
+    global processed_time_stamp
+    load_last_processed_timestamp()
+
+    if not processed_time_stamp:
+        return ""
+
+    return processed_time_stamp.strftime(
+        TIMESTAMP_FORMAT
+    )
+
+
+def clear_last_processed_timestamp():
+
+    global processed_time_stamp
+
+    with open(PROCESSED_FILE, "w", encoding="utf-8") as f:
+
+        f.write("")
+
+    processed_time_stamp = None
+
+    print("Processed timestamp cleared.")
+
+    return {
+        "success": True,
+        "message": "Timestamp cleared."
+    }
 
 # ----------------------------------------
 # runtime root
 # ----------------------------------------
+
 
 if getattr(sys, 'frozen', False):
     BUNDLE_ROOT = Path(sys.executable).parent
@@ -195,7 +349,9 @@ DEFAULT_IGNORE_WORDS = [
     "tone",
     "toddler",
     "two",
-    "your",
+    "on",
+    "with",
+    "designs",
 ]
 
 
@@ -320,6 +476,47 @@ def load_colors():
 
     return sorted(
         colors,
+        key=len,
+        reverse=True
+    )
+def load_ignore_words():
+
+    if not IGNORE_WORDS_FILE:
+        return []
+
+    if not IGNORE_WORDS_FILE.exists():
+        return []
+
+    ignore = []
+
+    with open(IGNORE_WORDS_FILE, "r", encoding="utf-8") as f:
+
+        for line in f:
+
+            line = line.strip().lower()
+
+            # --------------------------
+            # ignore empty/comment lines
+            # --------------------------
+
+            if not line:
+                continue
+
+            if line.startswith("#"):
+                continue
+
+            ignore.append(line)
+
+    # --------------------------
+    # longest first
+    #
+    # prevents:
+    # "tan" matching before
+    # "tumbleweed tan"
+    # --------------------------
+
+    return sorted(
+        ignore,
         key=len,
         reverse=True
     )

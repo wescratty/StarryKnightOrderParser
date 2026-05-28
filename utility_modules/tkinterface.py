@@ -106,12 +106,9 @@ class SuperTk:
 
             self.canvas.bind_all('<MouseWheel>', self._on_mousewheel)
 
-            self.scroll_area.pack(fill='both', expand=1)
-
         else:
 
             self.scroll_area = tk.Frame(window, background=self.bg)
-            self.scroll_area.pack(fill='both', expand=1)
 
         return {
             'window': self.window,
@@ -140,17 +137,16 @@ class SuperTk:
         """
         Creates and returns string variable for ui access
         """
+        str_var = self.tk.StringVar()
+        return self.store(str_var, 'strvar')
 
-        self.str_var = self.tk.StringVar()
-        return self.store(self.str_var, 'strvar')
-
-    def get_entry_box(self, append_to=None, width=30):
+    def get_entry_box(self, str_var, append_to=None, width=30):
         """
         Creates and returns entry box
         """
 
         append_to = append_to if append_to else self.scroll_area
-        tb = self.tk.Entry(append_to, width=width, bg=self.bg, fg=self.fg)
+        tb = self.tk.Entry(append_to, textvariable=str_var, width=width, bg=self.bg, fg=self.fg)
         tb.config(insertbackground=self.fg)
         return self.store(tb, 'entrybox')
 
@@ -250,7 +246,7 @@ class SuperTk:
             text=name,
             width=45,
             height=2,
-            bg='gray',
+            bg='#808080',
             fg=self.fg,
             command=func
         ), 'button')
@@ -310,15 +306,25 @@ class SuperTk:
         frame['pack']()
         frame['lf'].pack(pady=10)
         self.scroll_bottom(show_html_nav)
+        return frame['b_list']
 
     def scroll_bottom(self, show_html_nav):
-        """
-        Scrolls window to bottom
-        """
 
-        if show_html_nav:
-            self.window.update()
-            self.canvas.yview_moveto(1)
+        if not show_html_nav:
+            return
+
+        def _do_scroll():
+
+            self.canvas.update_idletasks()
+
+            bbox = self.canvas.bbox("all")
+
+            if bbox:
+                self.canvas.configure(scrollregion=bbox)
+
+            self.canvas.yview_moveto(1.0)
+
+        self.window.after_idle(_do_scroll)
 
     def set_theme(self, dark):
         """

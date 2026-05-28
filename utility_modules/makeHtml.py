@@ -1,7 +1,7 @@
 from collections import defaultdict
 import webbrowser
-import os
 import config
+from .orderItem import AddonType
 
 
 TABLE_HEADERS = [
@@ -75,6 +75,8 @@ def get_table_category(order):
 
     elif "scout" in name:
         return "Scout"
+    else:
+        print("~~~~~~~" + name)
 
     return None
 
@@ -248,15 +250,43 @@ def export_orders_html(orders, filename="orders.html"):
                     if qty and int(qty) > 1:
                         display = f"{display} ×{qty}"
 
+                    if len(order.addOns):
+                        for add in order.addOns:
+                            if add.type == AddonType.SOLE:
+                                display = f"({add.icon}{add.color }) {display}"
+                            elif add.type == AddonType.WOOL:
+                                display = f"{add.icon} {display}"
+                            elif add.type == AddonType.UNKNOWN:
+                                display = f"{add.icon} {display}"
+                            elif add.type == AddonType.GIFT:
+                                display = f"{add.icon}{display}"
+                            if add.note:
+                                display = f"📝{display}"
+
                     # --------------------------
                     # tooltip (order verification)
                     # --------------------------
 
-                    tooltip = f"""
-                    Order {order.orderNum}
-                    {order.original_order_string}
-                    {order.note or ""}
-                    """.strip()
+                    # tooltip = f"""
+                    # Order {order.orderNum}
+                    # {order.original_order_string}
+                    # {order.note or ""}
+                    # """.strip()
+                    tooltip_parts = [
+                        f"Order {order.orderNum}",
+                        order.original_order_string,
+                        order.note or ""
+                    ]
+
+                    if order.addOns:
+                        tooltip_parts.append(
+                            "\n".join(add.display_text for add in order.addOns)
+                        )
+                        tooltip_parts.append(
+                            "\n".join(add.note for add in order.addOns)
+                        )
+
+                    tooltip = "\n".join(tooltip_parts).strip()
 
                     tooltip = tooltip.replace('"', '&quot;')
 
@@ -280,6 +310,7 @@ def export_orders_html(orders, filename="orders.html"):
     </body>
     </html>
     """
+
 
     # ----------------------------------------
     # write file
