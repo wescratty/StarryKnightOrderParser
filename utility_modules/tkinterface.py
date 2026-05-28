@@ -140,7 +140,7 @@ class SuperTk:
         str_var = self.tk.StringVar()
         return self.store(str_var, 'strvar')
 
-    def get_entry_box(self, str_var, append_to=None, width=30):
+    def get_entry_box(self, str_var, append_to=None, width=30, height=5):
         """
         Creates and returns entry box
         """
@@ -236,20 +236,22 @@ class SuperTk:
             val += 1
         return ret_obj
 
-    def get_button(self, frame, name, func):
+    def get_button(self, frame, name, func, width=45, height=2):
         """
         Creates and returns button
         """
-
-        return self.store(self.tk.Button(
+        button = self.tk.Button(
             frame,
             text=name,
-            width=45,
-            height=2,
+            width=width,
+            height=height,
             bg='#808080',
             fg=self.fg,
             command=func
-        ), 'button')
+        )
+        button.config(background=self.bg)
+        self.store(button, 'button')
+        return button
 
     def get_radio_button(self, frame, text, var, value, func):
         """

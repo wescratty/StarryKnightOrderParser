@@ -83,30 +83,31 @@ class OrderParser:
         config.load_paths()
         config.initialize_app()
 
-    def set_date_range(self, btn_n):
+    def set_date_clear(self):
+        ret = config.clear_last_processed_timestamp()
+        self.display_label_to_user(message=ret["message"], urgency=2, reuse_lower_label=False)
+        self.search_text.delete(0, "end")
+
+    def set_date_range(self):
         """
         """
 
-        if int(btn_n) == 0:
-            validation = config.set_last_processed_timestamp(self.search_text.get())
-            self.processed_time_stamp = config.get_last_processed_timestamp_string()
+        validation = config.set_last_processed_timestamp(self.search_text.get())
+        self.processed_time_stamp = config.get_last_processed_timestamp_string()
 
-            if validation["success"]:
+        if validation["success"]:
 
-                self.display_label_to_user(
-                    'Set last processed time stamp to ' + self.processed_time_stamp, 1, False)
-            else:
-                self.display_label_to_user(
-                    validation["message"], 1, False)
-                self.search_text.delete(0, "end")
-                self.search_text.insert(0, self.processed_time_stamp)
-            self.search_text.config(bg="black")
-            self.set_button_instance.config(bg="#808080")
-
-        elif int(btn_n) == 1:
-            ret = config.clear_last_processed_timestamp()
-            self.display_label_to_user(message=ret["message"], urgency=2, reuse_lower_label=False)
+            self.display_label_to_user(
+                'Set last processed time stamp to ' + self.processed_time_stamp, 1, False)
+        else:
+            self.display_label_to_user(
+                validation["message"], 1, False)
             self.search_text.delete(0, "end")
+            self.search_text.insert(0, self.processed_time_stamp)
+        self.search_text.config(bg="black")
+        self.set_button_instance.config(bg=self.tk.bg)
+
+
 
     def load_csv(self, btn_n):
         """
@@ -285,9 +286,17 @@ class OrderParser:
                                    0, False)
 
         self.search_label = self.tk.get_label('Last Processed Order Timestamp', append_to=self.window).pack()
+
+        row = self.tk.tk.Frame(self.window, height=3, background=self.tk.bg)
+        row.pack()
         self.var_text_search = self.tk.get_str_var()
-        self.search_text = self.tk.get_entry_box(append_to=self.window, str_var=self.var_text_search).pack()
+        self.search_text = self.tk.get_entry_box(append_to=row, str_var=self.var_text_search).pack(side=self.tk.tk.LEFT)
         self.search_text = self.tk.get_invoked()
+
+        self.tk.get_button(row, "Set", self.set_date_range, 3, 1).pack(side=self.tk.tk.LEFT, padx=5)
+        self.set_button_instance = self.tk.get_invoked()
+        self.tk.get_button(row, "Clear", self.set_date_clear, 4, 1).pack(side=self.tk.tk.LEFT, padx=5)
+
         if self.processed_time_stamp:
             self.search_text.insert(0, self.processed_time_stamp)
 
@@ -298,9 +307,9 @@ class OrderParser:
                 "2026-05-07 22:33:43"
             )
 
-        b_list = self.tk.add_frame('Order Date Range', ['Set', 'Clear'],
-                          self.set_date_range, self.window, True)
-        self.set_button_instance = b_list[0]
+        # b_list = self.tk.add_frame('Order Date Range', ['Set', 'Clear'],
+        #                   self.set_date_range, self.window, True)
+        # self.set_button_instance = b_list[0]
 
         self.tk.add_frame('CSV', ['Load CSV Order'],
                           self.load_csv, self.window, True)
