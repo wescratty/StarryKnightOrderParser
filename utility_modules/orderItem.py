@@ -1,178 +1,457 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List, Dict
 import re
 import config
 from enum import Enum
+from utility_modules import helper
+from collections import defaultdict
 
 
-addonList = list()
+DEBUG = True
+
+class AddMarkers(Enum):
+    WOOL = "natural wool insert"
+    BIG_RUNNER = "big runner"
+    PURSE = "purse"
+    HEADBAND = "headband"
+    GIFT = "gift card"
 
 
-class AddonType(Enum):
-
-    WOOL = "wool"
-    SOLE = "sole"
-    GIFT = "gift"
-    UNKNOWN = "unknown"
-
-
-ADDON_TYPE_MAP = {
-
-    "Natural Wool Insert": AddonType.WOOL,
-
-    "Big Runner": AddonType.SOLE,
-
-    "Gift Card": AddonType.GIFT,
+ICON_MAP = {
+    helper.AddonType.WOOL: "🐑",
+    helper.AddonType.SOLE: "👟",
+    helper.AddonType.PURSE: "👜",
+    helper.AddonType.HEADBAND: "🎀",
+    helper.AddonType.GIFT: "💳",
 }
 
-# ----------------------------------------
-# master color list
-# easy to extend later
-# ----------------------------------------
-
-# Get Notes and highlight if note
-DEBUG = False
-
-# ----------------------------------------
-# words that do not matter operationally
-# for display text generation
-# ----------------------------------------
-IGNORE_LOCATION = {
-    "(bottom l)",
-    "(bottom r)",
-    "(top l)",
-    "(top r)",
-    "(top l)",
-    "(middle)",
-    "(left)",
-    "(right)",
+CATEGORY_MAP = {
+    helper.AddonType.WOOL: "Natural Wool Insert",
+    helper.AddonType.SOLE: "Big Runner",
+    helper.AddonType.PURSE: "Purse",
+    helper.AddonType.HEADBAND: "Headband",
+    helper.AddonType.GIFT: "Gift Card",
+    helper.AddonType.UNKNOWN: "Unknown",
 }
-
-
 # ----------------------------------------
-# final table headers
+# Classes
 # ----------------------------------------
 
-header = [
-    "Size",
-    "Lotus",
-    "T-strap",
-    "RAINEY Janes",
-    "BELLA Jane",
-    "SEQ",
-    "SUN",
-    "Daisy",
-    "Moccs",
-    "Two tone",
-    "Loafers",
-    "Designs",
-    "Critters",
-    "Scout"
-]
 
-
-@dataclass
-class ParseEvent:
-    level: int   # "info", "warning", "error"
-    message: str
-    orderNum: Optional[str] = None
-    timestamp: Optional[str] = None
-
-
-# ----------------------------------------
-# order object
-# ----------------------------------------
 @dataclass()
 class Addon:
-    timeStamp: str
+    time_stamp: str
     original_order_string: str
-    quantity: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    order_num: Optional[str] = None
+    quantity: Optional[int] = 1
     note: Optional[str] = None
-    orderNum: Optional[str] = None
-    category: Optional[str] = None
-
-    type = AddonType.UNKNOWN
-    description = None
-    icon = None
-    color = None
     display_text: Optional[str] = None
+    product_name: Optional[str] = None
+    category: Optional[str] = None
+    size: Optional[int] = None
+    prefix: Optional[str] = None
+
+    add_type: Optional[helper.AddonType] = None
+
+    def get_size_and_prefix_tuple(self):
+        return self.prefix, str(self.size)
+
+    def set_size_and_prefix_tuple(self, size_tuple):
+        self.prefix = size_tuple[0]
+        self.size = size_tuple[1]
+
+    def get_display(self):
+        ret_str = f""
+        if self.note:
+            ret_str += f"📝 {self.note}\n"
+        if self.icon:
+            ret_str += f"{self.icon}"
+        if self.color:
+            ret_str += f"({self.color})"
+        if self.display_text:
+            ret_str += f"{self.display_text}"
+        elif self.product_name:
+            ret_str += f"{self.product_name}"
+        elif self.original_order_string:
+            ret_str += f"{self.original_order_string}"
+
+        return ret_str
+
+    def get_order_piggyback_display(self):
+        ret_str = f""
+        if self.note:
+            ret_str += f"📝"
+        if self.icon:
+            ret_str += f"{self.icon}"
+        if self.color:
+            ret_str += f"({self.color})"
+        if self.quantity and int(self.quantity) > 1:
+            ret_str += f"X{self.quantity}"
+
+        return ret_str
 
 
 @dataclass
 class OrderItem:
-
-    # mandatory
-    timeStamp: str
-
-    # untouched original order string
+    time_stamp: str
     original_order_string: str
-    addOns: list["Addon"] = field(default_factory=list)
-
-    # order number
-    orderNum: Optional[str] = None
-
-    # quantity
-    quantity: Optional[str] = None
-
-    # parsed display string
+    order_num: Optional[str] = None
+    quantity: Optional[int] = 1
     note: Optional[str] = None
-
-    # parsed display string
     display_text: Optional[str] = None
-
-    # parsed attributes
     product_name: Optional[str] = None
     category: Optional[str] = None
 
-    size: Optional[str] = None
-    age: Optional[str] = None
-    measurement: Optional[str] = None
+    size: Optional[int] = None
+    prefix: Optional[str] = None
 
+    addOns: list["Addon"] = field(default_factory=list)
+    age: Optional[str] = None
+    size_prefix: Optional[str] = None
+    measurement: Optional[str] = None
     variant: Optional[str] = None
     variant_full: Optional[str] = None
     variant_display: Optional[str] = None
-
-    # multiple colors possible
     colors: list = field(default_factory=list)
 
+    def get_size_and_prefix_tuple(self):
+        return self.prefix, str(self.size)
+
+    def set_size_and_prefix_tuple(self, size_tuple):
+        self.prefix = size_tuple[0]
+        self.size = size_tuple[1]
+
+    def get_display(self):
+        ret_str = f""
+        if self.note:
+            ret_str += f"📝"
+        # if len(self.colors):
+        #     for color in self.colors:
+        #         ret_str += f"({color})"
+        if self.display_text:
+            ret_str += f"{self.display_text}"
+        elif self.product_name:
+            ret_str += f"{self.product_name}"
+        elif self.original_order_string:
+            ret_str += f"{self.original_order_string}"
+        if self.quantity and int(self.quantity) > 1:
+            ret_str += f"X{self.quantity}"
+        return ret_str
+
+    def get_tool_tip(self, add_ons):
+        tooltip_parts = list()
+        tooltip_parts.append(f"Order {self.order_num}")
+        tooltip_parts.append(self.original_order_string)
+        tooltip_parts.append(self.note or "")
+        if len(add_ons):
+            for add in add_ons:
+                tooltip_parts.append(add.get_display())
+
+        return "\n".join(tooltip_parts).strip().replace('"', '&quot;')
+
+
+@dataclass
+class Order:
+    time_stamp: str
+    order_num: Optional[str] = None
+    note: Optional[str] = None
+
+    addOns: List[Addon] = field(default_factory=list)
+    orderItems: List[OrderItem] = field(default_factory=list)
+
+@dataclass
+class Batch:
+    addOns_list: List[Addon] = field(default_factory=list)
+    orders_list: List[OrderItem] = field(default_factory=list)
+    orderItems: Dict[str, List[OrderItem]] = field(init=False, default_factory=dict)
+    orderAddons: Dict[str, List[Addon]] = field(init=False, default_factory=dict)
+
+    def __post_init__(self):
+        grouped_orders = defaultdict(list)
+        grouped_addons = defaultdict(list)
+
+        for item in self.orders_list:
+            grouped_orders[item.order_num].append(item)
+
+        self.orderItems = dict(grouped_orders)
+
+        for item in self.addOns_list:
+            grouped_addons[item.order_num].append(item)
+
+        self.orderAddons = dict(grouped_addons)
+
+    def add_add_on(self, add_on: Addon):
+        self.addOns_list.append(add_on)
+
+    def add_order(self, order: OrderItem):
+        self.orders_list.append(order)
+
+    def get_order_item(self, order_num: str) -> List[OrderItem]:
+        return self.orderItems.get(order_num, [])
+
+    def get_orders(self) :
+        return self.orderItems
+
+    def get_order_addon_items(self, order_num: str) -> List[Addon]:
+        return self.orderAddons.get(order_num, [])
+
+    def get_all_order_items(self) -> List[OrderItem]:
+        result = []
+
+        for items in self.orderItems.values():
+            result.extend(items)
+
+        return result
+
+    def get_headers(self) -> List[str]:
+        result = dict()
+
+        for item in self.get_all_order_items():
+            if item.category not in result:
+                result[item.category] = 1
+
+        return list(result.keys())
+
+    def get_all_addon_items(self) -> List[Addon]:
+        result = []
+
+        for items in self.orderAddons.values():
+            result.extend(items)
+
+        return result
+
+    def get_addon_category(self, category: str) -> List[Addon]:
+        return self.orderAddons.get(category, [])
+
+    def get_order_notes(self) -> List[tuple[str, str]]:
+        notes = []
+
+        for items in self.orderItems.values():
+            for item in items:
+                if item.note:
+                    notes.append((item.order_num, item.note))
+
+        return notes
+
+    def get_order_category(self, category: str) -> List[OrderItem]:
+        orders = []
+
+        for items in self.orderItems.values():
+            for item in items:
+                if item.category == category:
+                    orders.append(item)
+
+        return orders
+
+    def get_addon_notes(self) -> List[tuple[str, str]]:
+        notes = []
+
+        for items in self.orderAddons.values():
+            for item in items:
+                if item.note:
+                    notes.append((item.order_num, item.note))
+
+        return notes
+
+    def get_addon_categorized(self):
+        add_ons = self.get_all_addon_items()
+        addon_rows = defaultdict(list)
+        self.get_try_big_runner_size()
+
+        for add in add_ons:
+            if add.add_type == helper.AddonType.GIFT:
+                continue
+
+            if add.add_type == helper.AddonType.SOLE:
+                addon_rows[f"{add.category} {add.color}"].append(add)
+            else:
+                addon_rows[add.category].append(add)
+
+        return addon_rows
+
+    def get_try_big_runner_size(self):
+        orders = self.get_orders()
+        order_nums = list(orders.keys())
+        for order_num in order_nums:
+            add_ons = self.get_order_addon_items(order_num)
+            orders = self.get_order_item(order_num)
+            note = None
+            for order in orders:
+                if order.note:
+                    note = order.note
+
+            total_black_big_runners = 0
+            total_tan_big_runners = 0
+
+            for add in add_ons:
+                if not add.note and note is not None:
+                    add.note = note
+                if add.add_type == helper.AddonType.SOLE:
+                    if add.color.lower() == "tan":
+                        total_tan_big_runners += add.quantity
+                    if add.color.lower() == "black":
+                        total_black_big_runners += add.quantity
+
+            total_runners = total_black_big_runners + total_tan_big_runners
+
+            if len(orders) == total_runners:
+                if total_black_big_runners == 0 or total_tan_big_runners == 0:
+                    print("can figure out runner size")
+                    size_list = list()
+                    idx = 0
+                    for order in orders:
+                        size_list.append(order.size)
+                    for add in add_ons:
+                        if add.add_type == helper.AddonType.SOLE:
+                            add.size = size_list[idx]
+                            idx += 1
+
+                            # set tuple thing
+
+            elif total_runners > 0:
+                print(order_num, "can not figure out runner size!!!!!!!!!!!!!!!!!")
+
+    def get_total_pairs(self):
+        all_orders = self.get_all_order_items()
+        total = 0
+        for order in all_orders:
+            q = 1
+            if order.quantity:
+                q = int(order.quantity)
+            total += q
+
+        return total
+
+
+def get_class(
+    text,
+    time_stamp,
+    quantity=None,
+    note=None,
+    order_num=None
+):
+    lower = text.lower()
+
+    for marker in AddMarkers:
+        if marker.value in lower:
+            return get_add_on_item(
+                text=text,
+                time_stamp=time_stamp,
+                add_type=helper.ADDON_TYPE_MAP.get(marker.value, helper.AddonType.UNKNOWN),
+                quantity=quantity,
+                note=note,
+                order_num=order_num,
+            )
+
+    return get_order_item(
+    text,
+    time_stamp,
+    quantity=quantity,
+    note=note,
+    order_num=order_num
+)
+
+
+def get_order_item(text, time_stamp, quantity=None, note=None, order_num=None):
+    order = OrderItem(
+        time_stamp=time_stamp,
+        original_order_string=text,
+        quantity=quantity,
+        note=note,
+        order_num=order_num
+    )
+
+    return parse_order_item_data(order)
+
+
+def get_add_on_item(text, time_stamp, add_type, quantity=None, note=None, order_num=None):
+    add = Addon(
+        time_stamp=time_stamp,
+        original_order_string=text,
+        add_type=add_type,
+        display_text=text,
+        quantity=quantity,
+        note=note,
+        order_num=order_num
+    )
+    classify_addon(add)
+    return add
+
+
+def get_size_and_prefix(item, size_str):
+    size_match = re.search(
+        r'-\s*(?:(kids)|([WM]))?\s*(\d+(?:\.\d+)?)',
+        size_str,
+        re.IGNORECASE
+    )
+
+    kids_prefix, wm_prefix, size_number = size_match.groups()
+
+    if size_match:
+        item.size = size_number
+        item.prefix = kids_prefix or wm_prefix
+        size_str = size_str[:size_match.start()].strip()
+
+    return size_str
+
+
+# ----------------------------------------
+# Addon Data Extraction
+# ----------------------------------------
 
 def classify_addon(item):
+    """
+        refactor this
+    """
+
     if not isinstance(item, Addon):
         return
 
-    # ----------------------------------------
-    # wool insert
-    # ----------------------------------------
+    item.icon = ICON_MAP.get(item.add_type, "❓")
+    item.category = helper.CATEGORY_MAP.get(item.add_type, CATEGORY_MAP[helper.AddonType.UNKNOWN])
 
-    if item.type == AddonType.WOOL:
-
-        item.icon = "🐑"
-
-    # ----------------------------------------
-    # rubber sole
-    # ----------------------------------------
-
-    elif item.type == AddonType.SOLE:
-
-        item.icon = "👟"
-
-        if " - " in item.description:
-
-            item.color = (
-                item.description
+    if item.add_type == helper.AddonType.WOOL:
+        if " - " in item.display_text:
+            item.size = (
+                item.display_text
                 .split(" - ")[-1]
                 .strip()
                 .title()
             )
 
-    # ----------------------------------------
-    # fallback
-    # ----------------------------------------
+    elif item.add_type == helper.AddonType.SOLE:
+        if " - " in item.display_text:
+            item.color = get_color_end_hyphen(item)
+        if item.color is None:
+            item.color = extract_big_runner_color(item.display_text)
+
+    elif item.add_type == helper.AddonType.HEADBAND:
+        item.color = get_color_end_hyphen(item)
+        item.add_type = helper.AddonType.HEADBAND
+        item.icon = ICON_MAP.get(helper.AddonType.HEADBAND)
+        item.size = "None"
+
+    elif item.add_type == helper.AddonType.PURSE:
+        item.add_type = helper.AddonType.PURSE
+        item.color = extract_purse_color(item.display_text)
+        item.icon = ICON_MAP.get(helper.AddonType.PURSE)
+        item.size = "None"
+
+    elif item.add_type == helper.AddonType.GIFT:
+        item.add_type = helper.AddonType.GIFT
+        item.color = "None"
+        item.size = "None"
 
     else:
-
         item.icon = "➕"
-        item.type = AddonType.UNKNOWN
+        item.add_type = helper.AddonType.UNKNOWN
+        print("Missed one", item)
+
+
+def get_color_end_hyphen(item):
+    return item.display_text.split(" - ")[-1].strip().title()
 
 
 def parse_gift_card(item, text):
@@ -180,9 +459,9 @@ def parse_gift_card(item, text):
     if "gift card" not in text.lower():
         return
 
-    item.description = text
-    item.icon = "💳"
-    item.type = AddonType.GIFT
+    item.display_text = text
+    item.add_type = helper.AddonType.GIFT
+    item.category = "Gift Card"
 
 
 def extract_big_runner_color(text):
@@ -190,118 +469,34 @@ def extract_big_runner_color(text):
     marker = "Big Runner"
 
     if marker not in text:
-        return None
+        return "None"
 
     color = text.split(marker)[0].strip()
 
     if not color:
-        return None
+        return "None"
 
     return color.title()
 
 
-# def detect_special_item(item, text):
-#
-#     lower = text.lower()
-#
-#     # ----------------------------------------
-#     # structured ADD// addons
-#     # ----------------------------------------
-#     if text.startswith("ADD//"):
-#
-#         parse_addon(item, text)
-#
-#     # ----------------------------------------
-#     # embedded sole addon
-#     # ----------------------------------------
-#
-#     elif "big runner add to men's" in lower:
-#
-#         item.is_addon = True
-#
-#         item.addon_type = AddonType.SOLE
-#
-#         item.addon_description = text
-#         item.colors = [extract_big_runner_color(text)]
-#
-#     # ----------------------------------------
-#     # gift cards
-#     # ----------------------------------------
-#
-#     if "gift card" in lower:
-#
-#         parse_gift_card(item, text)
+def extract_purse_color(text):
 
+    marker = "purse"
 
-def get_order_item(text, timeStamp, quantity=None, note=None, orderNum=None):
-    return OrderItem(
-        timeStamp=timeStamp,
-        original_order_string=text,
-        quantity=quantity,
-        note=note,
-        orderNum=orderNum
-    )
+    if marker not in text.lower():
+        return "None"
 
+    color = text.split(marker)[0].strip()
 
-def get_add_on_item(text, timeStamp, quantity=None, note=None, orderNum=None):
-    return Addon(
-        timeStamp=timeStamp,
-        original_order_string=text,
-        display_text=text,
-        quantity=quantity,
-        note=note,
-        orderNum=orderNum
-    )
+    if not color:
+        return "None"
 
+    return color.title()
 
-def detect_class(text, timeStamp, quantity=None, note=None, orderNum=None):
-    lower = text.lower()
-
-    if text.startswith("ADD//"):
-        item = get_add_on_item(text, timeStamp, quantity, note, orderNum)
-        parse_addon(item, text)
-        classify_addon(item)
-
-        # detect_special_item(item, text)
-
-    elif "big runner add to men's" in lower:
-        item = get_add_on_item(text, timeStamp, quantity, note, orderNum)
-        item.type = AddonType.SOLE
-        item.description = text
-        item.display_text = text
-        item.icon = "👟"
-        item.color = extract_big_runner_color(text)
-        item.note = note
-
-    elif "gift card" in lower:
-        item = get_add_on_item(text, timeStamp, quantity, note, orderNum)
-        parse_gift_card(item, text)
-    else:
-        item = get_order_item(text, timeStamp, quantity, note, orderNum)
-
-    return item
-
-
-def parse_addon(item, text):
-    parts = text.split("//")
-    if len(parts) < 3:
-        return
-
-    raw_type = parts[1].strip()
-
-    item.type = ADDON_TYPE_MAP.get(
-        raw_type,
-        AddonType.UNKNOWN
-    )
-
-    description = parts[2].strip()
-    item.description = description
-    item.display_text = text
 
 # ----------------------------------------
-# color extraction
+# OrderItem Data Extraction
 # ----------------------------------------
-
 
 def extract_varient(text):
 
@@ -311,7 +506,7 @@ def extract_varient(text):
     lower = text.lower()
 
     # remove junk location suffixes
-    for junk in IGNORE_LOCATION:
+    for junk in helper.IGNORE_LOCATION:
         lower = lower.replace(junk, "")
 
     # longest first prevents partial collisions
@@ -339,7 +534,7 @@ def extract_colors(text):
     lower = text.lower()
 
     # remove junk location suffixes
-    for junk in IGNORE_LOCATION:
+    for junk in helper.IGNORE_LOCATION:
         lower = lower.replace(junk, "")
 
     # longest first prevents partial collisions
@@ -406,29 +601,19 @@ def parse_order_item(
     orderNum=None
 ):
 
-    item = detect_class(text, timeStamp, quantity, note, orderNum)
+    item = get_class(text, timeStamp, quantity, note, orderNum)
     if isinstance(item, Addon):
         return item
 
+    return parse_order_item_data(item)
 
-    # --------------------------
-    # colors
-    # prefer variant colors first
-    # --------------------------
 
+def parse_order_item_data(item):
     item.colors = []
-
-    # --------------------------
-    # split variant
-    # --------------------------
-
-    parts = text.split(" / ")
-
+    parts = item.original_order_string.split(" / ")
     main = parts[0]
-
     if len(parts) > 1:
         item.variant_full = parts[1].strip()
-
     # variant usually contains the actual chosen color
     if item.variant_full:
         color_list = extract_varient(item.variant_full)
@@ -437,66 +622,30 @@ def parse_order_item(
 
         # fallback display-safe version (keeps modifiers)
         # item.variant_display = item.variant_full
-
     # fallback to full string
     if not item.colors:
-        item.colors = extract_colors(text)
-
+        item.colors = extract_colors(item.original_order_string)
     # --------------------------
     # display text
     # --------------------------
-
     item.display_text = extract_display_text(
         main,
         item.colors,
         item.variant_display
     )
-
     # --------------------------
     # extract size block
     # --------------------------
 
-    size_match = re.search(
-        r'-\s*([0-9]+)\s*\((.*?)\)\s*([0-9.]+")',
-        main
-    )
-
-    if size_match:
-
-        item.size = size_match.group(1).strip()
-        item.age = size_match.group(2).strip()
-        item.measurement = size_match.group(3).strip()
-
-        # remove sizing info
-        main = main[:size_match.start()].strip()
-
+    main = get_size_and_prefix(item, main)
     # --------------------------
     # category detection
     # --------------------------
-
-    categories = [
-        "LOAFERS",
-        "MOCCS",
-        "SCOUT BOOTIES",
-        "BELLA JANES",
-        "RAINEY JANES",
-        "SUNRISE",
-        "SEQUOIA",
-        "T-Strap",
-        "SANDALS",
-        "Cute Critters",
-        "Headband",
-        "Gift card"
-    ]
-
-    for cat in categories:
-
+    for cat in helper.CATEGORY:
         if cat.lower() in main.lower():
             item.category = cat
             break
-
     item.product_name = main
-
     return item
 
 
@@ -511,9 +660,8 @@ def parse_orders(
     notes=None,
     orderNums=None
 ):
-
-    orders = []
-    events = []
+    batch = Batch()
+    events = list()
 
     last_processed = config.load_last_processed_timestamp()
 
@@ -522,14 +670,14 @@ def parse_orders(
     for i, text in enumerate(order_strings):
 
         ts = ""
-
         if timestamps:
             ts = timestamps[i]
 
         order_num = None
-
         if orderNums:
-            order_num = orderNums[i]
+            if orderNums[i].startswith("#"):
+                order_number = orderNums[i]
+                order_num = order_number[1:]
 
         quantity = None
         if quantities:
@@ -550,20 +698,18 @@ def parse_orders(
             current_dt = config.timestamp_to_datetime(ts)
 
             if last_processed and current_dt <= last_processed:
-                events.append(ParseEvent(
+                events.append(helper.ParseEvent(
                     level=1,
                     message=f"Skipping already processed order: {ts}",
-                    orderNum=orderNums[i] if orderNums else None,
+                    order_num=orderNums[i] if orderNums else None,
                     timestamp=ts
                 ))
 
                 continue
 
-            if (
-                newest_timestamp is None or
-                current_dt > newest_timestamp
-            ):
+            if newest_timestamp is None or current_dt > newest_timestamp:
                 newest_timestamp = current_dt
+
         item = parse_order_item(
                 text=text,
                 timeStamp=ts,
@@ -573,24 +719,23 @@ def parse_orders(
             )
 
         if isinstance(item, Addon):
-            addonList.append(item)
+            batch.add_add_on(item)
         elif isinstance(item, OrderItem):
-            orders.append(item)
+            batch.add_order(item)
 
-    for addon in addonList:
-        for item in orders:
-            if item.orderNum == addon.orderNum:
-                item.addOns.append(addon)
     # ----------------------------------------
     # save newest processed timestamp
     # ----------------------------------------
 
-    if newest_timestamp:
-
+    if not DEBUG and newest_timestamp:
         config.set_last_processed_timestamp(
             newest_timestamp.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
         )
 
-    return orders, events
+    return batch, events
+
+
+# =====================================
+

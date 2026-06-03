@@ -14,6 +14,15 @@ from tkinter import filedialog
 import utility_modules as um
 from utility_modules import makeHtml as mHtml
 import config
+from dataclasses import dataclass, field
+from typing import Optional
+
+@dataclass
+class ParseEvent:
+    level: int   # "info", "warning", "error"
+    message: str
+    orderNum: Optional[str] = None
+    timestamp: Optional[str] = None
 
 
 class OrderParser:
@@ -107,8 +116,6 @@ class OrderParser:
         self.search_text.config(bg="black")
         self.set_button_instance.config(bg=self.tk.bg)
 
-
-
     def load_csv(self, btn_n):
         """
         Full CSV load + parse + export pipeline
@@ -153,7 +160,7 @@ class OrderParser:
         # convert to domain objects
         # ----------------------------------------
 
-        orders, events = um.orderItem.parse_orders(
+        batch, events = um.orderItem.parse_orders(
             order_strings=csv_tree["Lineitem name"],
             timestamps=csv_tree["Created at"],
             quantities=csv_tree["Lineitem quantity"],
@@ -169,8 +176,8 @@ class OrderParser:
 
             msg = e.message
 
-            if e.orderNum:
-                msg = f"{e.orderNum} - {msg}"
+            if e.order_num:
+                msg = f"{e.order_num} - {msg}"
 
             self.display_label_to_user(
                 msg,
@@ -182,7 +189,19 @@ class OrderParser:
         # export HTML
         # ----------------------------------------
 
-        mHtml.export_orders_html(orders)
+        user_notify_list = mHtml.export_orders_html(batch)
+        for notify in user_notify_list:
+            msg = notify.message
+
+            if hasattr(notify, "order_num"):
+                msg = f"{notify.order_num} - {msg}"
+
+            self.display_label_to_user(
+                msg,
+                urgency=notify.level,
+                reuse_lower_label=False
+            )
+
         config.archive_csv_file(path)
         self.processed_time_stamp = config.get_last_processed_timestamp_string()
         self.search_text.delete(0, "end")
