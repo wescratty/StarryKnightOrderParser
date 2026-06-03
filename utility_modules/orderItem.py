@@ -9,6 +9,7 @@ from collections import defaultdict
 
 DEBUG = True
 
+
 class AddMarkers(Enum):
     WOOL = "natural wool insert"
     BIG_RUNNER = "big runner"
@@ -161,6 +162,7 @@ class Order:
     addOns: List[Addon] = field(default_factory=list)
     orderItems: List[OrderItem] = field(default_factory=list)
 
+
 @dataclass
 class Batch:
     addOns_list: List[Addon] = field(default_factory=list)
@@ -191,7 +193,7 @@ class Batch:
     def get_order_item(self, order_num: str) -> List[OrderItem]:
         return self.orderItems.get(order_num, [])
 
-    def get_orders(self) :
+    def get_orders(self):
         return self.orderItems
 
     def get_order_addon_items(self, order_num: str) -> List[Addon]:
@@ -345,13 +347,7 @@ def get_class(
                 order_num=order_num,
             )
 
-    return get_order_item(
-    text,
-    time_stamp,
-    quantity=quantity,
-    note=note,
-    order_num=order_num
-)
+    return get_order_item(text, time_stamp, quantity=quantity, note=note, order_num=order_num)
 
 
 def get_order_item(text, time_stamp, quantity=None, note=None, order_num=None):
@@ -546,14 +542,10 @@ def extract_colors(text):
     return list(set(found))
 
 
-# ----------------------------------------
-# display text extraction
-# ----------------------------------------
+def extract_display_text(main_text):
 
-def extract_display_text(main_text, colors=None, variant_display=None):
-
-    COLORS = get_colors()
-    IGNORE_WORDS = get_ignore_words()
+    colors = get_colors()
+    ignore_words = get_ignore_words()
     # everything before size block already removed
     left = main_text
 
@@ -569,18 +561,16 @@ def extract_display_text(main_text, colors=None, variant_display=None):
     filtered = []
 
     for word in words:
-
         lower = word.lower()
 
-        if lower not in IGNORE_WORDS:
+        if lower not in ignore_words:
             if colors:
-                if lower not in COLORS:
+                if lower not in colors:
                     filtered.append(word)
             else:
                 filtered.append(word)
 
     filtered = list(dict.fromkeys(filtered))
-
     result = " ".join(filtered).strip()
 
     if colors:
@@ -588,20 +578,16 @@ def extract_display_text(main_text, colors=None, variant_display=None):
 
     return result.strip()
 
-# ----------------------------------------
-# parse single order
-# ----------------------------------------
-
 
 def parse_order_item(
     text,
-    timeStamp,
+    time_stamp,
     quantity=None,
     note=None,
-    orderNum=None
+    order_num=None
 ):
 
-    item = get_class(text, timeStamp, quantity, note, orderNum)
+    item = get_class(text, time_stamp, quantity, note, order_num)
     if isinstance(item, Addon):
         return item
 
@@ -620,27 +606,13 @@ def parse_order_item_data(item):
         if len(color_list):
             item.colors = color_list
 
-        # fallback display-safe version (keeps modifiers)
-        # item.variant_display = item.variant_full
     # fallback to full string
     if not item.colors:
         item.colors = extract_colors(item.original_order_string)
-    # --------------------------
-    # display text
-    # --------------------------
-    item.display_text = extract_display_text(
-        main,
-        item.colors,
-        item.variant_display
-    )
-    # --------------------------
-    # extract size block
-    # --------------------------
 
+    item.display_text = extract_display_text(main)
     main = get_size_and_prefix(item, main)
-    # --------------------------
-    # category detection
-    # --------------------------
+
     for cat in helper.CATEGORY:
         if cat.lower() in main.lower():
             item.category = cat
@@ -658,7 +630,7 @@ def parse_orders(
     timestamps=None,
     quantities=None,
     notes=None,
-    orderNums=None
+    order_nums=None
 ):
     batch = Batch()
     events = list()
@@ -674,9 +646,9 @@ def parse_orders(
             ts = timestamps[i]
 
         order_num = None
-        if orderNums:
-            if orderNums[i].startswith("#"):
-                order_number = orderNums[i]
+        if order_nums:
+            if order_nums[i].startswith("#"):
+                order_number = order_nums[i]
                 order_num = order_number[1:]
 
         quantity = None
@@ -689,10 +661,6 @@ def parse_orders(
         if notes:
             note = notes[i]
 
-        # ----------------------------------------
-        # skip previously processed
-        # ----------------------------------------
-
         if ts and not DEBUG:
 
             current_dt = config.timestamp_to_datetime(ts)
@@ -701,7 +669,7 @@ def parse_orders(
                 events.append(helper.ParseEvent(
                     level=1,
                     message=f"Skipping already processed order: {ts}",
-                    order_num=orderNums[i] if orderNums else None,
+                    order_num=order_nums[i] if order_nums else None,
                     timestamp=ts
                 ))
 
@@ -712,10 +680,10 @@ def parse_orders(
 
         item = parse_order_item(
                 text=text,
-                timeStamp=ts,
+                time_stamp=ts,
                 quantity=quantity,
                 note=note,
-                orderNum=order_num
+                order_num=order_num
             )
 
         if isinstance(item, Addon):
@@ -735,7 +703,3 @@ def parse_orders(
         )
 
     return batch, events
-
-
-# =====================================
-

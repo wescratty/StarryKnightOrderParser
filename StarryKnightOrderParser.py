@@ -165,7 +165,7 @@ class OrderParser:
             timestamps=csv_tree["Created at"],
             quantities=csv_tree["Lineitem quantity"],
             notes=csv_tree["Notes"],
-            orderNums=csv_tree["Name"]
+            order_nums=csv_tree["Name"]
         )
 
         # ----------------------------------------
