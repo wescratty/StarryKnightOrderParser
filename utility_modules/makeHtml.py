@@ -2,7 +2,6 @@ import re
 from collections import defaultdict
 import webbrowser
 import config
-from utility_modules import helper
 from utility_modules.orderItem import Batch
 from dataclasses import dataclass, field
 from typing import Any
@@ -142,7 +141,7 @@ def build_order_list_html(batch: Batch) -> str:
     order_dict = batch.get_orders()
 
     for order_num, items in order_dict.items():
-        html += f"<li class='order'>"
+        html += f"<li>"
         html += f"<div class='order-header'>Order #{order_num}</div>"
 
         html += "<ul class='order-items'>"
@@ -185,75 +184,12 @@ def build_order_list_html(batch: Batch) -> str:
     return html
 
 
-def row_has_data(size, headers, rows):
-    return any(rows[size][header] for header in headers)
-
-
-def build_table_html(rows, sorted_sizes, headers, batch):
-    html = f"<div class=\"report-section\">"
-    html += "<table>"
-    html += "<tr>"
-    html += "<th>Size</th>"
-
-    for header in headers:
-        html += f"<th>{header}</th>"
-
-    html += "</tr>"
-
-    for size in sorted_sizes:
-        if not row_has_data(size, headers, rows):
-            continue
-        html += "<tr>"
-        html += f"<td><b>{size}</b></td>"
-
-        for header in headers:
-            orders_in_cell = rows[size][header]
-            html += "<td>"
-
-            if orders_in_cell:
-                html += "<ul>"
-
-                for order in orders_in_cell:
-                    display = order.get_display()
-                    # if not display:
-                    #     display = order.product_name
-
-                    add_ons = batch.get_order_addon_items(order_num=order.order_num)
-                    if len(add_ons):
-                        for add in add_ons:
-                            display = f"{add.get_order_piggyback_display()}{display}"
-
-                    tooltip = order.get_tool_tip(add_ons)
-
-                    note_class = (
-                        "has-note"
-                        if order.note
-                        else ""
-                    )
-
-                    html += f'''
-                    <li class="{note_class}" title="{tooltip}">
-                        {display}
-                    </li>
-                    '''
-
-                html += "</ul>"
-            html += "</td>"
-        html += "</tr>"
-    html += "</table>"
-    html += "</div>"
-    html += """
-    <div class="page-break"></div>
-    """
-
-    return html
-
-
 def build_main_table_html(batch):
     report = Report("Shoes", max_rows=13)
     headers = batch.get_headers()
     for header in headers:
         cat_orders = batch.get_order_category(header)
+
         if len(cat_orders):
             table = Table(header, ["Size", "Description"])
 
@@ -261,36 +197,41 @@ def build_main_table_html(batch):
                 html = f"<div class='report-section'>"
 
                 size = order.size
-
                 display = order.get_display()
 
                 add_ons = batch.get_order_addon_items(order_num=order.order_num)
+
                 if len(add_ons):
                     for add in add_ons:
                         display = f"{add.get_order_piggyback_display()}{display}"
 
                 tooltip = order.get_tool_tip(add_ons)
 
-                note_class = (
-                    "has-note"
-                    if order.note
-                    else ""
-                )
-
-                html += f'''
-                <div class="{note_class}" title="{tooltip}">
-                    {display}
-                </div>
-                '''
+                size_html = f"""               
+                     <button class="order " ">
+                        {size}
+                    </button>
+                """
+                html += get_tool_tip(display, tooltip)
                 html += "</div>"
-                table.add([size, html])
+
+                table.add([size_html, html])
 
             report.add(table=table)
     return report
 
 
-def is_int(value):
+def get_tool_tip(main_display, tooltip):
+    size_html = f'''          
+                <details>
+                    <summary>{main_display}</summary>
+                    <pre>{tooltip}</pre>
+                </details>
+                '''
+    return size_html
 
+
+def is_int(value):
     try:
         int(value)
         return True
@@ -301,7 +242,7 @@ def is_int(value):
 
 def sort_size(add):
     if not add.size:
-        return (99, 999)
+        return 99, 999
 
     size = str(add.size).strip()
 
@@ -312,7 +253,7 @@ def sort_size(add):
     )
 
     if not match:
-        return (99, 999)
+        return 99, 999
 
     kids_prefix, wm_prefix, number = match.groups()
 
@@ -324,7 +265,7 @@ def sort_size(add):
         prefix = ""
 
     prefix_order = {
-        "": 0,   # numeric kids sizes: 1, 2, 3...
+        "": 0,   # numeric toddler sizes: 1, 2, 3...
         "K": 0,  # explicit "kids 2.5"
         "M": 1,
         "W": 2,
@@ -346,47 +287,44 @@ def export_orders_html(batch: Batch, filename="orders.html"):
         print("No output path configured.")
         return
 
-    rows = defaultdict(lambda: defaultdict(list))
-    adult_rows = defaultdict(lambda: defaultdict(list))
+    date_range_text = get_date_range(orders)
 
-    for order in orders:
-
-        category = order.category
-        # category = helper.get_table_category(order)
-
-        if not category:
-            user_notify_list.append(helper.ParseEvent(
-                    level=1,
-                    message=f"Couldn't get category",
-                    order_str=order.original_order_string,
-                    order_num=order.original_order_string,
-                    timestamp=order.time_stamp
-                ))
-            continue
-
-        if is_prefixed_size(order.size):
-            prefix = get_adult_prefix(order.size)
-            size = get_adult_numeric_size(order.size)
-            order.size_prefix = prefix
-            rows[prefix + str(size)][category].append(order)
-
-            adult_rows[prefix + str(size)][category].append(order)
-
-        elif not is_int(order.size):
-            user_notify_list.append(helper.ParseEvent(
-                level=1,
-                message=f"Couldn't get size",
-                order_str=order.original_order_string,
-                order_num=order.original_order_string,
-                timestamp=order.time_stamp
-            ))
-            continue
-        else:
-            rows[str(order.size)][category].append(order)
     # ----------------------------------------
-    # timestamp range
+    # html start
     # ----------------------------------------
 
+    html = get_preamble(date_range_text)
+
+    html += build_main_table_html(batch).make(4)
+
+    html += '''<h2>Leather Order</h2>'''
+    size_report = get_leather_order(orders)
+    html += size_report.make(max_tables=5)
+
+    add_report = get_add_on_report(batch)
+    html += add_report.make(max_tables=2)
+
+    html += build_order_list_html(batch)
+
+    html += """</body></html>"""
+
+    # ----------------------------------------
+    # write file
+    # ----------------------------------------
+
+    with open(output_file, "w", encoding="utf-8") as f:
+
+        f.write(html)
+
+    # ----------------------------------------
+    # open browser
+    # ----------------------------------------
+
+    webbrowser.open(output_file.as_uri())
+    return user_notify_list
+
+
+def get_date_range(orders):
     timestamps = [
         order.time_stamp
         for order in orders
@@ -394,9 +332,7 @@ def export_orders_html(batch: Batch, filename="orders.html"):
     ]
 
     date_range_text = ""
-
     if timestamps:
-
         cleaned = [
             clean_timestamp(ts)
             for ts in timestamps
@@ -406,14 +342,75 @@ def export_orders_html(batch: Batch, filename="orders.html"):
         end_ts = max(cleaned)
 
         date_range_text = f"{start_ts} - {end_ts}"
+    return date_range_text
 
-    # ----------------------------------------
-    # html start
-    # ----------------------------------------
 
-    html = f"""
+def get_add_on_report(batch):
+    add_ons_dict = batch.get_addon_categorized()
+    add_report = Report(max_rows=15)
+    for add_key in list(add_ons_dict.keys()):
+        add_list = add_ons_dict[add_key]
+        title = add_key
+        columns = ["Order Number", "Size", "Description"]
+        rows = []
+        for add in sorted(add_list, key=sort_size):
+            size = 999
+            if add.size:
+                size = add.size
+            rows.append([add.order_num, size, add.get_display()])
+
+        add_report.add(Table(
+            title=title,
+            columns=columns,
+            rows=rows
+        ))
+    return add_report
+
+
+def get_leather_order(orders):
+    small_sizes = defaultdict(int)
+    kid_sizes = defaultdict(int)
+    adult_sizes = defaultdict(int)
+    prefixes = ['M', 'W', 'Kids']
+    for order in orders:
+        if order.prefix in prefixes:
+            if order.prefix == 'M' or order.prefix == 'W':
+                for color in order.colors:
+                    adult_sizes[color] += order.quantity
+
+            if order.prefix == 'Kids':
+                for color in order.colors:
+                    kid_sizes[color] += order.quantity
+        else:
+            for color in order.colors:
+                small_sizes[color] += order.quantity
+    size_report = Report()
+    toddler_table = Table(title="Toddler", columns=["Color", "Qty"])
+    kids_table = Table(title="Kids", columns=["Color", "Qty"])
+    adult_table = Table(title="Adult", columns=["Color", "Qty"])
+    for color in list(small_sizes.keys()):
+        qty = small_sizes[color]
+        clr = color
+        toddler_table.add([clr, qty])
+    for color in list(kid_sizes.keys()):
+        qty = kid_sizes[color]
+        clr = color
+        kids_table.add([clr, qty])
+    for color in list(adult_sizes.keys()):
+        qty = adult_sizes[color]
+        clr = color
+        adult_table.add([clr, qty])
+    size_report.add(toddler_table)
+    size_report.add(kids_table)
+    size_report.add(adult_table)
+    return size_report
+
+
+def get_preamble(date_range_text):
+    return f"""
     <html>
     <head>
+    <meta charset="UTF-8">
 
         <title>Orders</title>
 
@@ -447,7 +444,7 @@ def export_orders_html(batch: Batch, filename="orders.html"):
 
             th, td {{
                 border: 1px solid black;
-                padding: 8px;
+                padding: 6px;
                 vertical-align: top;
             }}
 
@@ -456,7 +453,7 @@ def export_orders_html(batch: Batch, filename="orders.html"):
             }}
 
             td {{
-                min-width: 60px;
+                min-width: 30px;
             }}
 
             /* =========================
@@ -465,7 +462,7 @@ def export_orders_html(batch: Batch, filename="orders.html"):
 
             ul {{
                 margin: 0;
-                padding-left: 18px;
+                padding-left: 12px;
             }}
 
             li {{
@@ -510,10 +507,36 @@ def export_orders_html(batch: Batch, filename="orders.html"):
             .order {{
                 border: 1px solid #ddd;
                 padding: 10px;
-                margin-bottom: 12px;
+                margin-bottom: 0;
                 border-radius: 6px;
                 break-inside: avoid;
                 page-break-inside: avoid;
+                cursor: pointer;
+                width: 100%;
+                height: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }}
+            
+            .order.active {{
+                background: #ffff99;
+            }}
+            
+            .order.active::after {{
+                content: attr(data-tooltip);
+                white-space: pre-wrap;
+            
+                position: absolute;
+                top: 100%;
+                left: 0;
+            
+                z-index: 1000;
+            
+                background: white;
+                border: 1px solid black;
+                padding: 8px;
+                min-width: 250px;
             }}
 
             .order-header {{
@@ -525,6 +548,20 @@ def export_orders_html(batch: Batch, filename="orders.html"):
             .order-items {{
                 list-style: none;
                 padding-left: 10px;
+            }}
+            .order.red {{
+                background-color: #ff9999;
+            }}
+            .order.yellow {{
+                background-color: #FFBF00;
+            }}
+            
+            .order.gray {{
+                background-color: #d3d3d3;
+            }}
+            
+            .order.green {{
+                background-color: #90ee90;
             }}
 
             .order-item {{
@@ -572,7 +609,8 @@ def export_orders_html(batch: Batch, filename="orders.html"):
                     break-before: page;
                     page-break-before: always;
                 }}
-
+                
+                    
                 /* safer than page-breaking full tables */
                 tr {{
                     page-break-inside: avoid;
@@ -585,128 +623,29 @@ def export_orders_html(batch: Batch, filename="orders.html"):
             }}
 
         </style>
-
     </head>
+        <script>
+            const colors = ["", "yellow", "green", "red", "gray"];
+
+            document.addEventListener("click", function(e) {{
+                const order = e.target.closest(".order");
+            
+                if (!order) return;
+            
+                let index = parseInt(order.dataset.color || "0");
+            
+                order.classList.remove("red", "gray", "green", "yellow");
+            
+                index = (index + 1) % colors.length;
+            
+                if (colors[index]) {{
+                    order.classList.add(colors[index]);
+                }}
+            
+                order.dataset.color = index;
+            }});
+        </script>
 
     <body>
-
-    <h1>Order Summary </h1>
-    <h2> {date_range_text}</h2>
-
+    <h1>Order Summary {date_range_text}</h1>
     """
-    # sorted_sizes = sorted(rows.keys(), key=sort_key)
-
-    # headers = batch.get_headers()
-    # n = len(headers) // 3
-    #
-    # first = headers[:n]
-    # second = headers[n:2 * n]
-    # third = headers[2 * n:]
-    # html += build_table_html(
-    #     rows,
-    #     sorted_sizes,
-    #     first,
-    #     batch
-    # )
-    #
-    # html += build_table_html(
-    #     rows,
-    #     sorted_sizes,
-    #     second,
-    #     batch
-    # )
-    #
-    # html += build_table_html(
-    #     rows,
-    #     sorted_sizes,
-    #     third,
-    #     batch
-    # )
-
-    html += build_main_table_html(batch).make(4)
-
-    small_sizes = defaultdict(int)
-    kid_sizes = defaultdict(int)
-    adult_sizes = defaultdict(int)
-    prefixes = ['M', 'W', 'Kids']
-
-    for order in orders:
-        if order.prefix in prefixes:
-            if order.prefix == 'M' or order.prefix == 'W':
-                for color in order.colors:
-                    adult_sizes[color] += order.quantity
-
-            if order.prefix == 'Kids':
-                for color in order.colors:
-                    kid_sizes[color] += order.quantity
-        else:
-            for color in order.colors:
-                small_sizes[color] += order.quantity
-
-    size_report = Report()
-    toddler_table = Table(title="Toddler", columns=["Color", "Qty"])
-    kids_table = Table(title="Kids", columns=["Color", "Qty"])
-    adult_table = Table(title="Adult", columns=["Color", "Qty"])
-
-    for color in list(small_sizes.keys()):
-        qty = small_sizes[color]
-        clr = color
-        toddler_table.add([clr, qty])
-
-    for color in list(kid_sizes.keys()):
-        qty = kid_sizes[color]
-        clr = color
-        kids_table.add([clr, qty])
-
-    for color in list(adult_sizes.keys()):
-        qty = adult_sizes[color]
-        clr = color
-        adult_table.add([clr, qty])
-
-    size_report.add(toddler_table)
-    size_report.add(kids_table)
-    size_report.add(adult_table)
-
-    html += size_report.make(max_tables=5)
-
-    add_ons_dict = batch.get_addon_categorized()
-    add_report = Report(max_rows=15)
-
-    for add_key in list(add_ons_dict.keys()):
-        add_list = add_ons_dict[add_key]
-        title = add_key
-        columns = ["Size", "Description"]
-        rows = []
-        for add in sorted(add_list, key=sort_size):
-            if add.size:
-                rows.append([add.size, add.get_display()])
-            else:
-                rows.append([add.order_num, add.get_display()])
-
-        add_report.add(Table(
-            title=title,
-            columns=columns,
-            rows=rows
-        ))
-
-    html += add_report.make(max_tables=2)
-    html += build_order_list_html(batch)
-    html += """
-
-    </body>
-    </html>
-    """
-    # ----------------------------------------
-    # write file
-    # ----------------------------------------
-
-    with open(output_file, "w", encoding="utf-8") as f:
-
-        f.write(html)
-
-    # ----------------------------------------
-    # open browser
-    # ----------------------------------------
-
-    webbrowser.open(output_file.as_uri())
-    return user_notify_list

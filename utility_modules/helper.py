@@ -106,9 +106,9 @@ CATEGORY_MAP = {
 CATEGORY = [
     "Lotus",
     "T-strap",
-    "RAINEY Janes",
-    "BELLA Jane",
-    "Marry Jane", # check if this is correct
+    "RAINEY",
+    "BELLA",
+    "Marry",
     "SEQ",
     "SUN",
     "Daisy",

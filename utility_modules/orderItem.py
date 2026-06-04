@@ -494,6 +494,17 @@ def extract_purse_color(text):
 # OrderItem Data Extraction
 # ----------------------------------------
 
+
+def get_colors():
+
+    return config.load_colors()
+
+
+def get_ignore_words():
+
+    return config.load_ignore_words()
+
+
 def extract_varient(text):
 
     found = []
@@ -511,16 +522,6 @@ def extract_varient(text):
             found.append(lower)
 
     return list(set(found))
-
-
-def get_colors():
-
-    return config.load_colors()
-
-
-def get_ignore_words():
-
-    return config.load_ignore_words()
 
 
 def extract_colors(text):
@@ -542,10 +543,14 @@ def extract_colors(text):
     return list(set(found))
 
 
-def extract_display_text(main_text):
+# ----------------------------------------
+# display text extraction
+# ----------------------------------------
 
-    colors = get_colors()
-    ignore_words = get_ignore_words()
+def extract_display_text(main_text, colors=None, variant_display=None):
+
+    got_colors = get_colors()
+    got_ignore = get_ignore_words()
     # everything before size block already removed
     left = main_text
 
@@ -563,9 +568,9 @@ def extract_display_text(main_text):
     for word in words:
         lower = word.lower()
 
-        if lower not in ignore_words:
+        if lower not in got_ignore:
             if colors:
-                if lower not in colors:
+                if lower not in got_colors:
                     filtered.append(word)
             else:
                 filtered.append(word)
@@ -610,7 +615,12 @@ def parse_order_item_data(item):
     if not item.colors:
         item.colors = extract_colors(item.original_order_string)
 
-    item.display_text = extract_display_text(main)
+    item.display_text = extract_display_text(
+        main,
+        item.colors,
+        item.variant_display
+    )
+
     main = get_size_and_prefix(item, main)
 
     for cat in helper.CATEGORY:
@@ -690,7 +700,7 @@ def parse_orders(
             batch.add_add_on(item)
         elif isinstance(item, OrderItem):
             batch.add_order(item)
-
+    batch.__post_init__()
     # ----------------------------------------
     # save newest processed timestamp
     # ----------------------------------------

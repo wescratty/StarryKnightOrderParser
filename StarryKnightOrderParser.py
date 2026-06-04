@@ -17,6 +17,7 @@ import config
 from dataclasses import dataclass, field
 from typing import Optional
 
+
 @dataclass
 class ParseEvent:
     level: int   # "info", "warning", "error"
@@ -276,10 +277,10 @@ class OrderParser:
 
             self.display_label_to_user('The file structure will be built for you.', 2, False)
             self.display_label_to_user(
-                'Next: Download the orders_export.csv from shopify to yourFolder\INPUT_CSV\ACTIVE',
+                'Next: Download the orders_export.csv from shopify to yourFolder\\INPUT_CSV\\ACTIVE',
                 2, False)
             self.display_label_to_user('Finally: Press Load CSV Order and navigate to '
-                                       'yourFolder\INPUT_CSV\ACTIVE\orders_export.csv '
+                                       'yourFolder\\INPUT_CSV\\ACTIVE\\orders_export.csv '
                                        'and select open from the file chooser. \n'
                                        'On next load you can skip these steps. ',
                                        2, False)
@@ -291,12 +292,12 @@ class OrderParser:
             self.workspace_path = config.get_workspace_path()
             self.display_label_to_user('Workspace path' + str(self.workspace_path), 4, False)
             self.display_label_to_user(
-                'Download the orders_export.csv from shopify to yourFolder\INPUT_CSV\ACTIVE',
+                'Download the orders_export.csv from shopify to yourFolder\\INPUT_CSV\\ACTIVE',
                 0, False)
 
             self.display_label_to_user('Next: Press Load CSV Order and navigate to \n'
                                        '' + str(self.workspace_path) +
-                                       '\INPUT_CSV\ACTIVE\orders_export.csv \n'
+                                       '\\INPUT_CSV\\ACTIVE\\orders_export.csv \n'
                                        'and select open from the file chooser ',
                                        0, False)
 
@@ -325,10 +326,6 @@ class OrderParser:
                 0,
                 "2026-05-07 22:33:43"
             )
-
-        # b_list = self.tk.add_frame('Order Date Range', ['Set', 'Clear'],
-        #                   self.set_date_range, self.window, True)
-        # self.set_button_instance = b_list[0]
 
         self.tk.add_frame('CSV', ['Load CSV Order'],
                           self.load_csv, self.window, True)
