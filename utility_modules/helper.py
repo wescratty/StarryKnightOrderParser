@@ -1,74 +1,88 @@
+"""
+Author: Wes Cratty
+Created: 5/14/2026
+File: helper.py
+    Helper methods and filter
+
+Input: Shopify order csv
+
+Description: Format csv into a production cut sheet, either printable or usable on a touch surface.
+
+Output: Html
+
+"""
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
 
-def get_table_category(order):
-
-    if not order.original_order_string:
-        return None
-
-    name = order.original_order_string.lower()
-
-    if "lotus" in name:
-        return "Lotus"
-
-    elif "t-strap" in name:
-        return "T-strap"
-
-    elif "rainey janes" in name:
-        return "RAINEY Janes"
-
-    elif "bella janes" in name:
-        return "BELLA Jane"
-
-    elif "mary janes" in name:
-        return "Mary Jane"
-
-    elif "sequoia" in name:
-        return "SEQ"
-
-    elif "sunrise" in name:
-        return "SUN"
-
-    elif "daisy" in name:
-        return "Daisy"
-
-    elif "moccs" in name:
-        return "Moccs"
-
-    elif "two tone" in name:
-        return "Two tone"
-
-    elif "loafer" in name or "loafers" in name:
-        return "Loafers"
-
-    elif "critters" in name:
-        return "Critters"
-
-    elif "designs" in name:
-        return "Designs"
-
-    elif "scout" in name:
-        return "Scout"
-
-    elif "gift card" in name:
-        return "Gift Card"
-
-    elif "big runner" in name:
-        return "Big Runner"
-
-    elif "natural wool insert" in name:
-        return "Wool Insert"
-
-    elif "purse" in name:
-        return "Purse"
-
-    else:
-        print("~~~~~~~" + name)
-
-    return None
-
+# def get_table_category(order):
+#
+#     if not order.original_order_string:
+#         return None
+#
+#     name = order.original_order_string.lower()
+#
+#     if "lotus" in name:
+#         return "Lotus"
+#
+#     elif "t-strap" in name:
+#         return "T-strap"
+#
+#     elif "rainey janes" in name:
+#         return "RAINEY Janes"
+#
+#     elif "bella janes" in name:
+#         return "BELLA Jane"
+#
+#     elif "mary janes" in name:
+#         return "Mary Jane"
+#
+#     elif "sequoia" in name:
+#         return "SEQ"
+#
+#     elif "sunrise" in name:
+#         return "SUN"
+#
+#     elif "daisy" in name:
+#         return "Daisy"
+#
+#     elif "moccs" in name:
+#         return "Moccs"
+#
+#     elif "two tone" in name:
+#         return "Two tone"
+#
+#     elif "loafer" in name or "loafers" in name:
+#         return "Loafers"
+#
+#     elif "critters" in name:
+#         return "Critters"
+#
+#     elif "designs" in name:
+#         return "Designs"
+#
+#     elif "scout" in name:
+#         return "Scout"
+#
+#     elif "gift card" in name:
+#         return "Gift Card"
+#
+#     elif "big runner" in name:
+#         return "Big Runner"
+#
+#     elif "natural wool insert" in name:
+#         return "Wool Insert"
+#
+#     elif "purse" in name:
+#         return "Purse"
+#
+#     else:
+#         print("~~~~~~~" + name)
+#
+#     return None
+#
 
 
 
@@ -123,6 +137,23 @@ CATEGORY = [
 # ----------------------------------------
 # Maps and Filters
 # ----------------------------------------
+
+
+class AddMarkers(Enum):
+    WOOL = "natural wool insert"
+    BIG_RUNNER = "big runner"
+    PURSE = "purse"
+    HEADBAND = "headband"
+    GIFT = "gift card"
+
+
+ICON_MAP = {
+    AddonType.WOOL: "🐑",
+    AddonType.SOLE: "👟",
+    AddonType.PURSE: "👜",
+    AddonType.HEADBAND: "🎀",
+    AddonType.GIFT: "💳",
+}
 
 
 ADDON_TYPE_MAP = {

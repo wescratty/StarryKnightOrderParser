@@ -1,6 +1,6 @@
 """
-Auther: Wes Cratty
-Created: 1/18/2023
+Author: Wes Cratty
+Created: 5/14/2026
 File: tkinterface.py
 
 Description: Handles all tk interface creation objects

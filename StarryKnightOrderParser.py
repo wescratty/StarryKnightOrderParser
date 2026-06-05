@@ -1,29 +1,20 @@
 """
-Auther: Wes Cratty
-Created: 1/18/2023
+Author: Wes Cratty
+Created: 5/14/2026
 File: StarryKnightOrderParser.py
+    Create tkinter GUI
 
-Description: Navigate ViZn .config files, UI is for navigating to where you need to go, shown in a label
-Code may need extended to parse 'any'.xml. Currently hard coded path for ViZn Calibration.config files
+Input: Shopify order csv
 
-Output:
-excel.xlsm (included repo)
+Description: Format csv into a production cut sheet, either printable or usable on a touch surface.
+
+Output: Html
 
 """
 from tkinter import filedialog
 import utility_modules as um
 from utility_modules import makeHtml as mHtml
 import config
-from dataclasses import dataclass, field
-from typing import Optional
-
-
-@dataclass
-class ParseEvent:
-    level: int   # "info", "warning", "error"
-    message: str
-    orderNum: Optional[str] = None
-    timestamp: Optional[str] = None
 
 
 class OrderParser:

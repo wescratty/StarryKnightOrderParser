@@ -219,6 +219,7 @@ def archive_csv_file(path):
         "path": target
     }
 
+
 def get_last_processed_timestamp_string():
 
     global processed_time_stamp
@@ -479,6 +480,8 @@ def load_colors():
         key=len,
         reverse=True
     )
+
+
 def load_ignore_words():
 
     if not IGNORE_WORDS_FILE:

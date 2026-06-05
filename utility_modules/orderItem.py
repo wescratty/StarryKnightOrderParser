@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict
 import re
 import config
-from enum import Enum
 from utility_modules import helper
 from collections import defaultdict
 
@@ -10,30 +9,6 @@ from collections import defaultdict
 DEBUG = True
 
 
-class AddMarkers(Enum):
-    WOOL = "natural wool insert"
-    BIG_RUNNER = "big runner"
-    PURSE = "purse"
-    HEADBAND = "headband"
-    GIFT = "gift card"
-
-
-ICON_MAP = {
-    helper.AddonType.WOOL: "🐑",
-    helper.AddonType.SOLE: "👟",
-    helper.AddonType.PURSE: "👜",
-    helper.AddonType.HEADBAND: "🎀",
-    helper.AddonType.GIFT: "💳",
-}
-
-CATEGORY_MAP = {
-    helper.AddonType.WOOL: "Natural Wool Insert",
-    helper.AddonType.SOLE: "Big Runner",
-    helper.AddonType.PURSE: "Purse",
-    helper.AddonType.HEADBAND: "Headband",
-    helper.AddonType.GIFT: "Gift Card",
-    helper.AddonType.UNKNOWN: "Unknown",
-}
 # ----------------------------------------
 # Classes
 # ----------------------------------------
@@ -128,9 +103,6 @@ class OrderItem:
         ret_str = f""
         if self.note:
             ret_str += f"📝"
-        # if len(self.colors):
-        #     for color in self.colors:
-        #         ret_str += f"({color})"
         if self.display_text:
             ret_str += f"{self.display_text}"
         elif self.product_name:
@@ -336,7 +308,7 @@ def get_class(
 ):
     lower = text.lower()
 
-    for marker in AddMarkers:
+    for marker in helper.AddMarkers:
         if marker.value in lower:
             return get_add_on_item(
                 text=text,
@@ -405,8 +377,8 @@ def classify_addon(item):
     if not isinstance(item, Addon):
         return
 
-    item.icon = ICON_MAP.get(item.add_type, "❓")
-    item.category = helper.CATEGORY_MAP.get(item.add_type, CATEGORY_MAP[helper.AddonType.UNKNOWN])
+    item.icon = helper.ICON_MAP.get(item.add_type, "❓")
+    item.category = helper.CATEGORY_MAP.get(item.add_type, helper.CATEGORY_MAP[helper.AddonType.UNKNOWN])
 
     if item.add_type == helper.AddonType.WOOL:
         if " - " in item.display_text:
@@ -426,13 +398,13 @@ def classify_addon(item):
     elif item.add_type == helper.AddonType.HEADBAND:
         item.color = get_color_end_hyphen(item)
         item.add_type = helper.AddonType.HEADBAND
-        item.icon = ICON_MAP.get(helper.AddonType.HEADBAND)
+        item.icon = helper.ICON_MAP.get(helper.AddonType.HEADBAND)
         item.size = "None"
 
     elif item.add_type == helper.AddonType.PURSE:
         item.add_type = helper.AddonType.PURSE
         item.color = extract_purse_color(item.display_text)
-        item.icon = ICON_MAP.get(helper.AddonType.PURSE)
+        item.icon = helper.ICON_MAP.get(helper.AddonType.PURSE)
         item.size = "None"
 
     elif item.add_type == helper.AddonType.GIFT:

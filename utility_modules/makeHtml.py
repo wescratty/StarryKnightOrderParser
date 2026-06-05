@@ -1,3 +1,17 @@
+"""
+Author: Wes Cratty
+Created: 5/14/2026
+File: makeHtml.py
+    Create html
+
+Input: OrderItems
+
+Description: Format csv into a production cut sheet, either printable or usable on a touch surface.
+
+Output: Html
+
+"""
+
 import re
 from collections import defaultdict
 import webbrowser
