@@ -78,7 +78,9 @@ class Addon:
         """
         Compact form of get_display() used when an addon is shown
         "piggybacked" inline on its parent OrderItem's row instead of its
-        own row (no product name -- just note/icon/color/quantity).
+        own row (no product name -- just note/icon/color). Quantity is
+        deliberately not shown here (or in OrderItem.get_display()) -- the
+        owner found the "X<quantity>" suffix confusing on the cut sheet.
         """
 
         ret_str = f""
@@ -88,8 +90,6 @@ class Addon:
             ret_str += f"{self.icon}"
         if self.color:
             ret_str += f"({self.color})"
-        if self.quantity and int(self.quantity) > 1:
-            ret_str += f"X{self.quantity}"
 
         return ret_str
 
@@ -131,8 +131,9 @@ class OrderItem:
         """
         Builds the label shown for this order item's own row in the HTML
         report: note emoji, then whichever of display_text / product_name /
-        original_order_string is set, then an "X<quantity>" suffix if more
-        than one pair was ordered.
+        original_order_string is set. No quantity suffix -- the owner found
+        the "X<quantity>" notation confusing on the cut sheet, so quantity
+        is tracked internally (self.quantity) but not rendered here.
         """
 
         ret_str = f""
@@ -144,8 +145,6 @@ class OrderItem:
             ret_str += f"{self.product_name}"
         elif self.original_order_string:
             ret_str += f"{self.original_order_string}"
-        if self.quantity and int(self.quantity) > 1:
-            ret_str += f"X{self.quantity}"
         return ret_str
 
     def get_tool_tip(self, add_ons):
