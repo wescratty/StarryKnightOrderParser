@@ -17,6 +17,19 @@ from utility_modules import makeHtml as mHtml
 import config
 
 
+REQUIRED_CSV_COLUMNS = ["Lineitem name", "Created at", "Lineitem quantity", "Notes", "Name"]
+
+
+def get_missing_required_columns(csv_tree):
+    """
+    Returns the list of REQUIRED_CSV_COLUMNS not present as keys in csv_tree
+    (e.g. the dict returned by FileHelper.parse_csv_to_dict). Empty list
+    means the CSV has everything load_csv needs.
+    """
+
+    return [col for col in REQUIRED_CSV_COLUMNS if col not in csv_tree]
+
+
 class OrderParser:
     """
     Creates a tkinter UI window and allows ease of use for end user
@@ -143,6 +156,20 @@ class OrderParser:
         if not csv_tree:
             self.display_label_to_user(
                 "CSV parsing failed",
+                3,
+                False
+            )
+            return
+
+        # ----------------------------------------
+        # validate required columns
+        # ----------------------------------------
+
+        missing_columns = get_missing_required_columns(csv_tree)
+
+        if missing_columns:
+            self.display_label_to_user(
+                "CSV is missing required column(s): " + ", ".join(missing_columns),
                 3,
                 False
             )

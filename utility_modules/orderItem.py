@@ -6,7 +6,11 @@ from utility_modules import helper
 from collections import defaultdict
 
 
-DEBUG = True
+# DEBUG mode now lives in config (config.get_debug_mode() /
+# config.set_debug_mode()), persisted to a workspace file, instead of being
+# hardcoded here. While DEBUG is True, the "skip already-processed orders"
+# feature is off and every order in the CSV is reprocessed regardless of
+# the Last Processed Order Timestamp shown in the GUI.
 
 
 # ----------------------------------------
@@ -306,7 +310,7 @@ def get_class(
     note=None,
     order_num=None
 ):
-    lower = text.lower()
+    lower = (text or "").lower()
 
     for marker in helper.AddMarkers:
         if marker.value in lower:
@@ -355,9 +359,8 @@ def get_size_and_prefix(item, size_str):
         re.IGNORECASE
     )
 
-    kids_prefix, wm_prefix, size_number = size_match.groups()
-
     if size_match:
+        kids_prefix, wm_prefix, size_number = size_match.groups()
         item.size = size_number
         item.prefix = kids_prefix or wm_prefix
         size_str = size_str[:size_match.start()].strip()
@@ -618,66 +621,107 @@ def parse_orders(
     events = list()
 
     last_processed = config.load_last_processed_timestamp()
+    debug_mode = config.get_debug_mode()
 
     newest_timestamp = None
 
     for i, text in enumerate(order_strings):
 
-        ts = ""
-        if timestamps:
-            ts = timestamps[i]
+        row_order_num_raw = order_nums[i] if order_nums else None
 
-        order_num = None
-        if order_nums:
-            if order_nums[i].startswith("#"):
-                order_number = order_nums[i]
-                order_num = order_number[1:]
+        try:
+            ts = ""
+            if timestamps:
+                ts = timestamps[i]
 
-        quantity = None
-        if quantities:
-            quantity = quantities[i]
-
-        quantity = int(quantity) if quantity else 1
-
-        note = None
-        if notes:
-            note = notes[i]
-
-        if ts and not DEBUG:
-
-            current_dt = config.timestamp_to_datetime(ts)
-
-            if last_processed and current_dt <= last_processed:
+            # skip rows with no product name instead of creating a
+            # phantom line item with an empty product name
+            if not text or not text.strip():
                 events.append(helper.ParseEvent(
                     level=1,
-                    message=f"Skipping already processed order: {ts}",
-                    order_num=order_nums[i] if order_nums else None,
+                    message="Skipping row with blank Lineitem name",
+                    order_num=row_order_num_raw,
                     timestamp=ts
                 ))
-
                 continue
 
-            if newest_timestamp is None or current_dt > newest_timestamp:
-                newest_timestamp = current_dt
+            order_num = None
+            if order_nums:
+                if row_order_num_raw and row_order_num_raw.startswith("#"):
+                    order_num = row_order_num_raw[1:]
 
-        item = parse_order_item(
-                text=text,
-                time_stamp=ts,
-                quantity=quantity,
-                note=note,
-                order_num=order_num
-            )
+            quantity_raw = None
+            if quantities:
+                quantity_raw = quantities[i]
 
-        if isinstance(item, Addon):
-            batch.add_add_on(item)
-        elif isinstance(item, OrderItem):
-            batch.add_order(item)
+            try:
+                quantity = int(quantity_raw) if quantity_raw else 1
+            except (TypeError, ValueError):
+                events.append(helper.ParseEvent(
+                    level=1,
+                    message=f"Non-numeric quantity {quantity_raw!r}, defaulting to 1",
+                    order_num=row_order_num_raw,
+                    timestamp=ts
+                ))
+                quantity = 1
+
+            note = None
+            if notes:
+                note = notes[i]
+
+            if ts and not debug_mode:
+
+                current_dt = config.timestamp_to_datetime(ts)
+
+                if current_dt is None:
+                    events.append(helper.ParseEvent(
+                        level=2,
+                        message=f"Could not parse timestamp: {ts!r}",
+                        order_num=row_order_num_raw,
+                        timestamp=ts
+                    ))
+                else:
+                    if last_processed and current_dt <= last_processed:
+                        events.append(helper.ParseEvent(
+                            level=1,
+                            message=f"Skipping already processed order: {ts}",
+                            order_num=row_order_num_raw,
+                            timestamp=ts
+                        ))
+
+                        continue
+
+                    if newest_timestamp is None or current_dt > newest_timestamp:
+                        newest_timestamp = current_dt
+
+            item = parse_order_item(
+                    text=text,
+                    time_stamp=ts,
+                    quantity=quantity,
+                    note=note,
+                    order_num=order_num
+                )
+
+            if isinstance(item, Addon):
+                batch.add_add_on(item)
+            elif isinstance(item, OrderItem):
+                batch.add_order(item)
+
+        except Exception as exc:
+            events.append(helper.ParseEvent(
+                level=2,
+                message=f"Skipping row due to unexpected error: {exc}",
+                order_num=row_order_num_raw,
+                timestamp=timestamps[i] if timestamps else None
+            ))
+            continue
+
     batch.__post_init__()
     # ----------------------------------------
     # save newest processed timestamp
     # ----------------------------------------
 
-    if not DEBUG and newest_timestamp:
+    if not debug_mode and newest_timestamp:
         config.set_last_processed_timestamp(
             newest_timestamp.strftime(
                 "%Y-%m-%d %H:%M:%S"

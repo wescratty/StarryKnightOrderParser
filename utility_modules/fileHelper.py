@@ -54,20 +54,35 @@ class FileHelper:
     @staticmethod
     def parse_csv_to_dict(filename):
         """
+        Reads a CSV into a dict of column -> list of values.
+        Returns an empty dict (falsy) if the file can't be read or parsed,
+        so callers can check `if not csv_tree:` rather than catching
+        exceptions themselves.
         """
 
         ret = {}
 
-        with open(filename, 'r', newline='', encoding='utf-8') as data:
-            reader = csv.DictReader(data)
+        try:
+            # utf-8-sig transparently strips a BOM if the file picked one up
+            # from being re-saved in Excel; plain utf-8 files are unaffected.
+            with open(filename, 'r', newline='', encoding='utf-8-sig') as data:
+                reader = csv.DictReader(data)
 
-            # Initialize keys from headers
-            for field in reader.fieldnames:
-                ret[field] = []
+                if not reader.fieldnames:
+                    print(f"CSV has no header row: {filename}")
+                    return {}
 
-            # Fill lists
-            for row in reader:
+                # Initialize keys from headers
                 for field in reader.fieldnames:
-                    ret[field].append(row[field])
+                    ret[field] = []
+
+                # Fill lists
+                for row in reader:
+                    for field in reader.fieldnames:
+                        ret[field].append(row.get(field))
+
+        except (OSError, UnicodeDecodeError, csv.Error) as exc:
+            print(f"Failed to read CSV {filename}: {exc}")
+            return {}
 
         return ret
