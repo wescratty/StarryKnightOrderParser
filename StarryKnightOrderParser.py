@@ -1,29 +1,36 @@
 """
-Author: Wes Cratty
-Created: 5/14/2026
-File: StarryKnightOrderParser.py
-    Create tkinter GUI
+StarryKnightOrderParser.py
 
-Input: Shopify order csv
+Tkinter GUI entry point. Wires up the one-screen workflow: pick a
+workspace directory (first run only), set/clear the last-processed-order
+timestamp, and load a Shopify orders_export.csv -- which parses it
+(utility_modules.orderItem.parse_orders), renders the HTML report
+(utility_modules.makeHtml.export_orders_html), and archives the CSV
+(config.archive_csv_file).
 
-Description: Format csv into a production cut sheet, either printable or usable on a touch surface.
-
-Output: Html
-
+Run directly: `python StarryKnightOrderParser.py`
 """
-from tkinter import filedialog
+
 import utility_modules as um
 from utility_modules import makeHtml as mHtml
 import config
 
 
-class OrderParser:
-    """
-    Creates a tkinter UI window and allows ease of use for end user
+REQUIRED_CSV_COLUMNS = ["Lineitem name", "Created at", "Lineitem quantity", "Notes", "Name"]
 
-    show_html_nav: set to True will display additional tools to help for extending this app for other data
-    files in the future
+
+def get_missing_required_columns(csv_tree):
     """
+    Returns the list of REQUIRED_CSV_COLUMNS not present as keys in csv_tree
+    (e.g. the dict returned by FileHelper.parse_csv_to_dict). Empty list
+    means the CSV has everything load_csv needs.
+    """
+
+    return [col for col in REQUIRED_CSV_COLUMNS if col not in csv_tree]
+
+
+class OrderParser:
+    """Builds and drives the app's single Tkinter window."""
 
     def __init__(self):
         self.path_set = config.workspace_exists()
@@ -31,52 +38,25 @@ class OrderParser:
         if not self.path_set:
             self.geometry = '600x800'
 
-        self.ask_file = filedialog.askopenfile
         self.file = um.fh()
         self.tk = um.stk()
         win_obj = self.tk.get_window(title='Order Organizer', geometry=self.geometry, scroll=True)
         self.window = win_obj['window']
         self.scroll_area = win_obj['scroll_area']
-        self.path_label = None
         self.path_set = False
         self.workspace_path = None
         self.user_label = None
         self.search_label = None
         self.var_info_label = None
         self.var_text_search = None
-        self.var_text_path = None
         self.search_text = None
-        self.export_file_str = ''
-        self.stack_dict = dict()
-        self.button_id_list = list()
-        self.tree = dict()
-        self.branch = dict()
-        self.paths_that_end_with = list()
-        self.cal_pairs_array = list()
         self.root = ''
-        self.config_path = ''
         self.processed_time_stamp = ''
-        self.data_table = None
-        self.xml_path = None
-        self.num_dirs_to_show = -3  # save the last three items in the path to concatenate to the new path
         self.message_notify = ['#00FF00', 'white', 'yellow', 'red', 'blue']
-        self.export_dir = r'C:\dev\esu_data'
-        self.tree_html = 'tree.html'
-        self.default_search_str = 'csv'
-        self.template_location = 'esu_temp.xlsm'
         self.set_button_instance = None
 
-    def re_init(self):
-        """
-        Clears objects for repeated searches
-        """
-
-        self.stack_dict = dict()
-        self.button_id_list = list()
-
     def set_config_directory(self, btn_n):
-        """
-        """
+        """Handler for the first-run "Set Config directory" button: opens a directory picker and initializes the workspace there."""
 
         self.workspace_path = self.file.find_config_dir()
         self.display_label_to_user(message=self.workspace_path, urgency=2, reuse_lower_label=False)
@@ -85,13 +65,14 @@ class OrderParser:
         config.initialize_app()
 
     def set_date_clear(self):
+        """Handler for the "Clear" button next to the Last Processed Order Timestamp field."""
+
         ret = config.clear_last_processed_timestamp()
         self.display_label_to_user(message=ret["message"], urgency=2, reuse_lower_label=False)
         self.search_text.delete(0, "end")
 
     def set_date_range(self):
-        """
-        """
+        """Handler for the "Set" button next to the Last Processed Order Timestamp field -- validates and persists the entered timestamp."""
 
         validation = config.set_last_processed_timestamp(self.search_text.get())
         self.processed_time_stamp = config.get_last_processed_timestamp_string()
@@ -110,10 +91,12 @@ class OrderParser:
 
     def load_csv(self, btn_n):
         """
-        Full CSV load + parse + export pipeline
+        Full CSV load + parse + export pipeline: file picker -> read CSV
+        -> validate required columns -> parse_orders() -> display any
+        parse warnings/errors -> export_orders_html() -> display any
+        report warnings -> archive the source CSV -> refresh the
+        Last Processed Order Timestamp field.
         """
-
-        self.re_init()
 
         path = self.file.find_file()
 
@@ -129,7 +112,6 @@ class OrderParser:
         # store path
         # ----------------------------------------
 
-        self.paths_that_end_with = [path]
         self.root = path
 
         self.display_label_to_user(path, 2, False)
@@ -143,6 +125,20 @@ class OrderParser:
         if not csv_tree:
             self.display_label_to_user(
                 "CSV parsing failed",
+                3,
+                False
+            )
+            return
+
+        # ----------------------------------------
+        # validate required columns
+        # ----------------------------------------
+
+        missing_columns = get_missing_required_columns(csv_tree)
+
+        if missing_columns:
+            self.display_label_to_user(
+                "CSV is missing required column(s): " + ", ".join(missing_columns),
                 3,
                 False
             )
@@ -185,7 +181,7 @@ class OrderParser:
         for notify in user_notify_list:
             msg = notify.message
 
-            if hasattr(notify, "order_num"):
+            if notify.order_num:
                 msg = f"{notify.order_num} - {msg}"
 
             self.display_label_to_user(
@@ -199,31 +195,13 @@ class OrderParser:
         self.search_text.delete(0, "end")
         self.search_text.insert(0, self.processed_time_stamp)
 
-    def parse_csvs(self):
-        """
-        Main parser logic
-        Cycles through found files that matched search string
-        file.format_new_file_name: returns a file name to export
-        file.get_dict_from_xml: returns parsed xml as dict
-        travers:
-        """
-
-        tree_list = list()
-        if len(self.paths_that_end_with):
-            for path in self.paths_that_end_with:
-                self.re_init()
-                self.export_file_str = self.file.format_new_file_name(path, self.num_dirs_to_show)
-                self.tree = self.file.parse_csv_to_dict(path)
-                tree_list.append(self.file.parse_csv_to_dict(path))
-            return tree_list
-
-        else:
-            self.display_label_to_user('Please select a directory: '
-                                       'Press Find a File', 2, False)
-
     def display_label_to_user(self, message, urgency, reuse_lower_label):
         """
-        Displays messages to user with color coded strings
+        Displays a color-coded status message. urgency indexes
+        self.message_notify for the text color (0=green, 1=white,
+        2=yellow, 3=red, 4=blue). reuse_lower_label=True updates a single
+        persistent status label in place; False appends a new line to the
+        scrollable log instead.
         """
 
         fg = self.message_notify[urgency]
@@ -240,6 +218,7 @@ class OrderParser:
         self.tk.scroll_bottom(True)
 
     def on_change(self, *args):
+        """Highlights the timestamp field/Set button green while the timestamp text is being edited, as a visual "unsaved change" cue."""
 
         text = self.var_text_search.get()
 
@@ -250,10 +229,13 @@ class OrderParser:
 
     def main(self):
         """
-        Main UI setup
-        Toggles on show_html_nav: displays advanced user options
-        Adds button field sets
+        Builds out the rest of the window: first-run setup instructions
+        (if no workspace is configured yet) or the normal "here's where to
+        put your CSV" instructions, the Last Processed Order Timestamp
+        field + Set/Clear buttons, and the Load CSV Order button. Then
+        blocks on the Tkinter event loop.
         """
+
         config.initialize_app()
 
         self.path_set = config.workspace_exists()

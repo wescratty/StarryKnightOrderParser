@@ -1,15 +1,10 @@
 """
-Author: Wes Cratty
-Created: 5/14/2026
-File: helper.py
-    Helper methods and filter
+utility_modules/helper.py
 
-Input: Shopify order csv
-
-Description: Format csv into a production cut sheet, either printable or usable on a touch surface.
-
-Output: Html
-
+Shared lookup tables and small value types used across the parsing
+pipeline: category keywords, addon type <-> icon/category/marker maps,
+and the ParseEvent type used to report per-row warnings/errors back to
+the GUI.
 """
 
 from dataclasses import dataclass
@@ -17,78 +12,11 @@ from enum import Enum
 from typing import Optional
 
 
-# def get_table_category(order):
-#
-#     if not order.original_order_string:
-#         return None
-#
-#     name = order.original_order_string.lower()
-#
-#     if "lotus" in name:
-#         return "Lotus"
-#
-#     elif "t-strap" in name:
-#         return "T-strap"
-#
-#     elif "rainey janes" in name:
-#         return "RAINEY Janes"
-#
-#     elif "bella janes" in name:
-#         return "BELLA Jane"
-#
-#     elif "mary janes" in name:
-#         return "Mary Jane"
-#
-#     elif "sequoia" in name:
-#         return "SEQ"
-#
-#     elif "sunrise" in name:
-#         return "SUN"
-#
-#     elif "daisy" in name:
-#         return "Daisy"
-#
-#     elif "moccs" in name:
-#         return "Moccs"
-#
-#     elif "two tone" in name:
-#         return "Two tone"
-#
-#     elif "loafer" in name or "loafers" in name:
-#         return "Loafers"
-#
-#     elif "critters" in name:
-#         return "Critters"
-#
-#     elif "designs" in name:
-#         return "Designs"
-#
-#     elif "scout" in name:
-#         return "Scout"
-#
-#     elif "gift card" in name:
-#         return "Gift Card"
-#
-#     elif "big runner" in name:
-#         return "Big Runner"
-#
-#     elif "natural wool insert" in name:
-#         return "Wool Insert"
-#
-#     elif "purse" in name:
-#         return "Purse"
-#
-#     else:
-#         print("~~~~~~~" + name)
-#
-#     return None
-#
-
-
-
 @dataclass
 class ParseEvent:
-    level: int   # "info", "warning", "error"
+    """A single warning/error surfaced to the GUI while parsing a CSV or building the HTML report (see helper.CATEGORY/AddMarkers usage in orderItem.py/models.py)."""
+
+    level: int   # 0=info(green) 1=warning(white/yellow) 2=error(red) -- indexes StarryKnightOrderParser.message_notify
     message: str
     order_num: Optional[str] = None
     order_str: Optional[str] = None
@@ -117,12 +45,17 @@ CATEGORY_MAP = {
 # Headers
 # ----------------------------------------
 
+# orderParser.parse_order_item_data() matches these (case-insensitive
+# substring) against the product name to set OrderItem.category -- first
+# match wins. Unmatched items get category=None and are silently dropped
+# from the main "Shoes" report table (see makeHtml.build_main_table_html,
+# which only builds a table per category returned by Batch.get_headers()).
 CATEGORY = [
     "Lotus",
     "T-strap",
     "RAINEY",
     "BELLA",
-    "Marry",
+    "Mary",
     "SEQ",
     "SUN",
     "Daisy",
@@ -140,6 +73,8 @@ CATEGORY = [
 
 
 class AddMarkers(Enum):
+    """Keywords orderItem.get_class() matches (case-insensitive substring) to classify a CSV row as an Addon rather than an OrderItem. First match wins."""
+
     WOOL = "natural wool insert"
     BIG_RUNNER = "big runner"
     PURSE = "purse"
@@ -156,6 +91,8 @@ ICON_MAP = {
 }
 
 
+# AddMarkers value -> AddonType, used by orderItem.get_class() to translate
+# the matched marker into the add_type addonParser.classify_addon() reads.
 ADDON_TYPE_MAP = {
     "natural wool insert": AddonType.WOOL,
     "big runner": AddonType.SOLE,
@@ -165,12 +102,16 @@ ADDON_TYPE_MAP = {
     "unknown": AddonType.UNKNOWN,
 }
 
+# Multi-item orders sometimes suffix a product name with a per-item
+# placement note in parens (e.g. two headbands on the same order, one
+# marked "(left)", one "(right)"). Stripped out before color/variant
+# matching in orderParser.extract_varient()/extract_colors() so they don't
+# get mistaken for a color name.
 IGNORE_LOCATION = {
     "(bottom l)",
     "(bottom r)",
     "(top l)",
     "(top r)",
-    "(top l)",
     "(middle)",
     "(left)",
     "(right)",

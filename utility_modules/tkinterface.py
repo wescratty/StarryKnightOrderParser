@@ -1,16 +1,23 @@
 """
-Author: Wes Cratty
-Created: 5/14/2026
-File: tkinterface.py
+utility_modules/tkinterface.py
 
-Description: Handles all tk interface creation objects
+A small reusable Tkinter widget-building toolkit -- labels, entry boxes,
+buttons, scrollable window setup, and grouped widget helpers (checkbox/
+radio-button/button field sets). StarryKnightOrderParser.py's single
+screen only exercises a subset of this (get_window, get_label,
+get_entry_box, get_button, add_frame, scroll_bottom); the rest
+(pack_in/pack_stack, get_label_frame, gen_lframe_of_cb/rb, get_radio_button,
+get_check_box, set_theme) is unused today but kept as general-purpose
+toolkit for future screens rather than removed as dead code.
 """
 
-from tkinter import filedialog, ttk
+from tkinter import ttk
 import tkinter as tk
 
 
 class SuperTk:
+    """Tkinter widget-building toolkit with a fixed dark (green-on-black) theme by default; see set_theme() to switch to light."""
+
     def __init__(self):
         self.opacity = 0.90
         self.bg = 'black'
@@ -45,6 +52,13 @@ class SuperTk:
     # main window builder
     # --------------------------
     def get_window(self, title='App', geometry='500x1000', scroll=False):
+        """
+        Creates the main app window (idempotent -- returns the existing
+        window/scroll_area on repeat calls rather than building a second
+        one). With scroll=True, wraps a scrollable canvas + frame so
+        content can grow past the window's fixed height, with mouse-wheel
+        scrolling wired up; without it, just a plain frame.
+        """
 
         if self._initialized:
             return {

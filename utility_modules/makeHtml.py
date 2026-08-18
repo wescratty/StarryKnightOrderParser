@@ -1,38 +1,42 @@
 """
-Author: Wes Cratty
-Created: 5/14/2026
-File: makeHtml.py
-    Create html
+utility_modules/makeHtml.py
 
-Input: OrderItems
-
-Description: Format csv into a production cut sheet, either printable or usable on a touch surface.
-
-Output: Html
-
+Renders a parsed Batch (see utility_modules.models) into the production
+cut-sheet HTML report: a per-category shoe table, a leather/color-count
+summary, an add-ons table, and a per-order checklist view. Writes the
+result to OUTPUT_HTML/orders.html and opens it in the browser.
 """
 
 import re
 from collections import defaultdict
 import webbrowser
 import config
-from utility_modules.orderItem import Batch
+from utility_modules import helper
+from utility_modules.models import Batch
 from dataclasses import dataclass, field
 from typing import Any
 
 
 @dataclass
 class Table:
+    """One HTML <table>: a title, column headers, and rows (each row a list of cell values)."""
+
     title: str
     columns: list[str]
     rows: list[list[Any]] = field(default_factory=list)
 
-    def add(self, table):
-        self.rows.append(table)
+    def add(self, row):
+        self.rows.append(row)
 
 
 @dataclass
 class Report:
+    """
+    A collection of Tables rendered as a grid of side-by-side HTML tables,
+    splitting any table over max_rows into multiple same-titled tables
+    (chop()) and laying tables out max_tables-per-row (get_grid_of_tables()).
+    """
+
     title: str = ""
     max_rows: int = 18
     tables: list[Table] = field(default_factory=list)
@@ -120,35 +124,9 @@ class Report:
 # Generic Table builder
 # ----------------------------
 
-def is_prefixed_size(size):
-    if not size:
-        return False
-
-    return bool(
-        re.fullmatch(
-            r'(?:kids\s+|[WM])\d+(?:\.\d+)?',
-            str(size).strip(),
-            re.IGNORECASE
-        )
-    )
-
-
-def get_adult_prefix(size):
-
-    return str(size)[0].upper()
-
-
-def get_adult_numeric_size(size):
-
-    return float(str(size)[1:])
-
-
-def clean_timestamp(ts):
-
-    return ts.split(" -")[0]
-
-
 def build_order_list_html(batch: Batch) -> str:
+    """Renders the per-order checklist view: one <li> per order, its shoes, and its add-ons."""
+
     html = "<div class='report-section'>"
     html += "<ul class='order-list'>"
 
@@ -199,6 +177,14 @@ def build_order_list_html(batch: Batch) -> str:
 
 
 def build_main_table_html(batch):
+    """
+    Builds the main "Shoes" report: one Table per category (see
+    helper.CATEGORY), one row per order item, sorted by size. Each row's
+    description is a collapsible <details> (see make_details_html())
+    showing the piggybacked add-on summary and the full tooltip on
+    expand/hover.
+    """
+
     report = Report("Shoes", max_rows=13)
     headers = batch.get_headers()
     for header in headers:
@@ -221,12 +207,12 @@ def build_main_table_html(batch):
 
                 tooltip = order.get_tool_tip(add_ons)
 
-                size_html = f"""               
+                size_html = f"""
                      <button class="order " ">
                         {size}
                     </button>
                 """
-                html += get_tool_tip(display, tooltip)
+                html += make_details_html(display, tooltip)
                 html += "</div>"
 
                 table.add([size_html, html])
@@ -235,8 +221,10 @@ def build_main_table_html(batch):
     return report
 
 
-def get_tool_tip(main_display, tooltip):
-    size_html = f'''          
+def make_details_html(main_display, tooltip):
+    """Wraps a row's display text and tooltip in a collapsible <details>/<summary> element."""
+
+    size_html = f'''
                 <details>
                     <summary>{main_display}</summary>
                     <pre>{tooltip}</pre>
@@ -245,16 +233,14 @@ def get_tool_tip(main_display, tooltip):
     return size_html
 
 
-def is_int(value):
-    try:
-        int(value)
-        return True
-
-    except (TypeError, ValueError):
-        return False
-
-
 def sort_size(add):
+    """
+    Sort key for shoe/addon sizes: numeric toddler sizes and explicit
+    "kids" sizes sort first (by number), then men's ("M"), then women's
+    ("W"). Anything with no size, or a size that doesn't match the
+    expected pattern, sorts last.
+    """
+
     if not add.size:
         return 99, 999
 
@@ -292,14 +278,26 @@ def sort_size(add):
 
 
 def export_orders_html(batch: Batch, filename="orders.html"):
+    """
+    Renders the full HTML report for a Batch and writes it to
+    OUTPUT_HTML/<filename>, then opens it in the browser. Returns a list
+    of ParseEvent warnings collected while building the report (currently
+    just "couldn't infer big runner size" cases from get_add_on_report) --
+    empty list if there's nothing to flag, so callers can always safely
+    iterate the result.
+    """
+
     orders = batch.get_all_order_items()
     output_file = config.get_output_file(filename)
 
     user_notify_list = list()
 
     if not output_file:
-        print("No output path configured.")
-        return
+        user_notify_list.append(helper.ParseEvent(
+            level=2,
+            message="No output path configured -- set a workspace directory first.",
+        ))
+        return user_notify_list
 
     date_range_text = get_date_range(orders)
 
@@ -315,7 +313,8 @@ def export_orders_html(batch: Batch, filename="orders.html"):
     size_report = get_leather_order(orders)
     html += size_report.make(max_tables=5)
 
-    add_report = get_add_on_report(batch)
+    add_report, addon_events = get_add_on_report(batch)
+    user_notify_list.extend(addon_events)
     html += add_report.make(max_tables=2)
 
     html += build_order_list_html(batch)
@@ -339,6 +338,8 @@ def export_orders_html(batch: Batch, filename="orders.html"):
 
 
 def get_date_range(orders):
+    """Returns "<earliest> - <latest>" across every order's timestamp, or "" if none have one."""
+
     timestamps = [
         order.time_stamp
         for order in orders
@@ -348,7 +349,7 @@ def get_date_range(orders):
     date_range_text = ""
     if timestamps:
         cleaned = [
-            clean_timestamp(ts)
+            config.clean_timestamp(ts)
             for ts in timestamps
         ]
 
@@ -360,7 +361,9 @@ def get_date_range(orders):
 
 
 def get_add_on_report(batch):
-    add_ons_dict = batch.get_addon_categorized()
+    """Builds the add-ons Report (one Table per category/color grouping) and returns (report, events) -- events flags any order whose big runner size couldn't be inferred."""
+
+    add_ons_dict, events = batch.get_addon_categorized()
     add_report = Report(max_rows=15)
     for add_key in list(add_ons_dict.keys()):
         add_list = add_ons_dict[add_key]
@@ -378,10 +381,19 @@ def get_add_on_report(batch):
             columns=columns,
             rows=rows
         ))
-    return add_report
+    return add_report, events
 
 
 def get_leather_order(orders):
+    """
+    Builds the "Leather Order" report: total quantity needed per color,
+    split into Toddler / Kids / Adult tables by order.prefix (normalized
+    by orderParser.get_size_and_prefix() to exactly "Kids"/"M"/"W" so this
+    exact-match check is reliable regardless of how the size was typed in
+    Shopify). Orders with no prefix (plain numeric toddler sizes) fall
+    into the Toddler bucket.
+    """
+
     small_sizes = defaultdict(int)
     kid_sizes = defaultdict(int)
     adult_sizes = defaultdict(int)
@@ -421,6 +433,13 @@ def get_leather_order(orders):
 
 
 def get_preamble(date_range_text):
+    """
+    The report's <html><head> block: inline CSS (print + screen styles)
+    and a small click-to-cycle-color script for the order buttons
+    (none -> yellow -> green -> red -> gray, used to mark progress by
+    hand while cutting). Everything up through the opening <body><h1>.
+    """
+
     return f"""
     <html>
     <head>
