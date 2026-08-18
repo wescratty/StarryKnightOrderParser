@@ -50,19 +50,12 @@ CATEGORY_MAP = {
 # match wins. Unmatched items get category=None and are silently dropped
 # from the main "Shoes" report table (see makeHtml.build_main_table_html,
 # which only builds a table per category returned by Batch.get_headers()).
-#
-# NOTE (review): "Marry" at index 4 does not match any real product name
-# seen in sample data -- every "Mary Janes" product actually seen uses the
-# correct spelling "Mary". Left as-is rather than silently corrected here
-# since it's a business-naming decision (is "Mary Janes" even meant to be
-# its own category, distinct from RAINEY/BELLA/DAISY/SCOUT, all of which
-# are also "Janes" styles?) -- flagged in chat instead.
 CATEGORY = [
     "Lotus",
     "T-strap",
     "RAINEY",
     "BELLA",
-    "Marry",
+    "Mary",
     "SEQ",
     "SUN",
     "Daisy",
