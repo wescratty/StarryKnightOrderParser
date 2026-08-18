@@ -1,6 +1,7 @@
 """
-Tests for utility_modules.orderItem: get_size_and_prefix and parse_orders
-edge-case / crash handling.
+Tests for utility_modules.orderItem.parse_orders -- the CSV-import
+pipeline's edge-case / crash handling. See test_order_parser.py for
+get_size_and_prefix and other single-field extraction tests.
 """
 
 import csv
@@ -19,42 +20,6 @@ def load_csv_columns(path):
             cols[name].append(row.get(name))
     return cols
 
-
-# ----------------------------------------
-# get_size_and_prefix
-# ----------------------------------------
-
-class _FakeItem:
-    size = None
-    prefix = None
-
-
-def test_get_size_and_prefix_with_no_size_pattern_does_not_raise():
-    item = _FakeItem()
-    # previously: AttributeError from calling size_match.groups() on None
-    result = oi.get_size_and_prefix(item, "Rose Blush BELLA JANES Shoes Baby and Toddler")
-    assert result == "Rose Blush BELLA JANES Shoes Baby and Toddler"
-    assert item.size is None
-    assert item.prefix is None
-
-
-def test_get_size_and_prefix_with_size_pattern_still_works():
-    item = _FakeItem()
-    result = oi.get_size_and_prefix(item, "Some Product - 10")
-    assert result == "Some Product"
-    assert item.size == "10"
-
-
-def test_get_size_and_prefix_with_wm_prefix():
-    item = _FakeItem()
-    result = oi.get_size_and_prefix(item, "Some Product - W 8")
-    assert item.size == "8"
-    assert item.prefix.lower() == "w"
-
-
-# ----------------------------------------
-# parse_orders: crash bugs
-# ----------------------------------------
 
 def test_non_numeric_quantity_does_not_crash_batch(workspace):
     cols = load_csv_columns(FIXTURES_DIR / "non_numeric_quantity.csv")
@@ -165,3 +130,40 @@ def test_happy_path_end_to_end(workspace):
     assert len(batch.get_all_order_items()) == 1
     assert len(batch.get_all_addon_items()) == 2
     assert events == []
+
+
+def test_order_item_is_parsed_exactly_once(workspace):
+    """
+    Regression test for the double-parse bug found in review: parse_order_item()
+    used to call parse_order_item_data() a second time on an OrderItem that
+    get_class() had already fully parsed. Confirms parse_order_item_data is
+    now called exactly once per OrderItem row.
+
+    Patches utility_modules.orderParser.parse_order_item_data directly
+    (rather than pytest's monkeypatch fixture) since get_order_item() looks
+    it up by module-global name at call time, so a plain attribute swap is
+    enough -- and it keeps this test runnable without a pytest dependency.
+    """
+
+    from utility_modules import orderParser
+
+    call_count = {"n": 0}
+    original = orderParser.parse_order_item_data
+
+    def counting_wrapper(item):
+        call_count["n"] += 1
+        return original(item)
+
+    orderParser.parse_order_item_data = counting_wrapper
+    try:
+        oi.parse_orders(
+            order_strings=["Lotus Shoe - 10"],
+            timestamps=["2026-01-01 10:00:00"],
+            quantities=["1"],
+            notes=[None],
+            order_nums=["#1001"],
+        )
+    finally:
+        orderParser.parse_order_item_data = original
+
+    assert call_count["n"] == 1

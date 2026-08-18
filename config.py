@@ -1,3 +1,14 @@
+"""
+config.py
+
+Workspace setup and persisted app settings. On first run the app asks the
+user to pick a workspace directory (saved in BOOTSTRAP_FILE, in the user's
+home directory); load_paths()/initialize_app() then create/locate the
+config/, INPUT_CSV/{ACTIVE,ARCHIVE}/, OUTPUT_HTML/, and logs/ folders
+under it. Also handles timestamp parsing/validation for the "last
+processed order" feature, and the persisted DEBUG mode setting.
+"""
+
 import sys
 from pathlib import Path
 import shutil
@@ -51,6 +62,7 @@ TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def clean_timestamp(ts):
+    """Strips a trailing timezone offset off a Shopify timestamp, e.g. "2026-05-08 10:58:11 -0600" -> "2026-05-08 10:58:11". Also used by makeHtml.get_date_range()."""
 
     if not ts:
         return ""
@@ -67,6 +79,7 @@ def clean_timestamp(ts):
 
 
 def validate_timestamp(ts):
+    """Returns {"success": bool, "message": str} -- used both to validate the GUI's Last Processed Order Timestamp field and internally by timestamp_to_datetime()."""
 
     cleaned = clean_timestamp(ts)
 
@@ -101,6 +114,7 @@ def validate_timestamp(ts):
 
 
 def timestamp_to_datetime(ts):
+    """Parses a Shopify timestamp into a datetime, or None if it's empty/malformed (callers must check for None -- see orderItem.parse_orders())."""
 
     cleaned = clean_timestamp(ts)
 
@@ -120,6 +134,7 @@ def timestamp_to_datetime(ts):
 # ----------------------------------------
 
 def load_last_processed_timestamp():
+    """Reads the last-processed timestamp from PROCESSED_FILE into the module-level cache and returns it (None if unset/unparseable/no workspace)."""
 
     global processed_time_stamp
 
@@ -155,6 +170,7 @@ def get_last_processed_timestamp():
 
 
 def set_last_processed_timestamp(ts):
+    """Validates and persists a new last-processed timestamp (used both by the GUI's Set button and automatically by orderItem.parse_orders() when debug_mode is False)."""
 
     global processed_time_stamp
 
@@ -182,7 +198,9 @@ def set_last_processed_timestamp(ts):
 
 def archive_csv_file(path):
     """
-    Moves a processed CSV from ACTIVE → ARCHIVE
+    Moves a processed CSV from ACTIVE → ARCHIVE with a timestamp appended
+    to its filename, so re-exporting the same order range from Shopify
+    never overwrites a prior archive.
     """
 
     path = Path(path)
@@ -261,6 +279,9 @@ def clear_last_processed_timestamp():
 # ----------------------------------------
 
 
+# NOTE (review): unused elsewhere in the codebase -- looks like prep for a
+# future PyInstaller-style bundled build (locating resources relative to
+# the executable) that was never wired up. Left in place.
 if getattr(sys, 'frozen', False):
     BUNDLE_ROOT = Path(sys.executable).parent
 else:
@@ -367,6 +388,7 @@ DEFAULT_IGNORE_WORDS = [
 # ----------------------------------------
 
 def set_workspace_path(path):
+    """Saves the chosen workspace directory to BOOTSTRAP_FILE (in the user's home directory) so it's remembered across runs."""
 
     path = Path(path)
 
@@ -377,6 +399,7 @@ def set_workspace_path(path):
 
 
 def get_workspace_path():
+    """Reads the saved workspace directory from BOOTSTRAP_FILE, or None if never set."""
 
     if not BOOTSTRAP_FILE.exists():
         return None
@@ -392,6 +415,7 @@ def get_workspace_path():
 
 
 def workspace_exists():
+    """True if a workspace path is saved AND that directory still exists on disk."""
 
     path = get_workspace_path()
 
@@ -434,6 +458,7 @@ def ensure_empty_file(path):
 
 
 def get_output_file(filename="orders.html"):
+    """Returns the full path to write the HTML report to, or None if the workspace isn't initialized yet."""
 
     if not OUTPUT_DIR:
         return None
@@ -446,6 +471,7 @@ def get_output_file(filename="orders.html"):
 
 
 def load_colors():
+    """Reads config/colors.txt (one color per line, # comments ignored), longest-first so e.g. "tumbleweed tan" is checked before "tan" and doesn't get partially matched."""
 
     if not COLORS_FILE:
         return []
@@ -489,6 +515,7 @@ def load_colors():
 
 
 def load_ignore_words():
+    """Reads config/ignore_words.txt (one word per line, # comments ignored) -- marketing filler words stripped out of the displayed product name."""
 
     if not IGNORE_WORDS_FILE:
         return []
@@ -536,6 +563,7 @@ def load_ignore_words():
 
 
 def load_paths():
+    """Derives every workspace subdirectory/file path from the saved workspace root. Returns False (leaving all globals as they were) if no workspace is set yet."""
 
     global APP_ROOT
 
@@ -584,6 +612,7 @@ def load_paths():
 # ----------------------------------------
 
 def initialize_app():
+    """Creates every workspace directory and default config file that doesn't already exist. Safe to call repeatedly -- existing files/directories are left untouched."""
 
     if not load_paths():
 
