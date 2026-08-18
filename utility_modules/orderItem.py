@@ -1,3 +1,35 @@
+"""
+utility_modules/orderItem.py
+
+Turns raw Shopify CSV columns into domain objects and groups them into a
+Batch that makeHtml.py renders into the production cut-sheet HTML.
+
+Pipeline, top to bottom:
+  1. parse_orders()      -- one CSV -> one Batch. Iterates every row,
+                             isolates failures per-row, returns (Batch, events).
+  2. parse_order_item()  -- one row -> one OrderItem or Addon.
+  3. get_class()         -- decides OrderItem vs Addon by keyword match
+                             ("wool insert", "big runner", "purse", ...).
+  4. parse_order_item_data() / classify_addon()
+                          -- fill in size/color/category fields for
+                             whichever kind of object it is.
+
+Two parallel object kinds come out of this:
+  - OrderItem: a pair of shoes -- the thing being made.
+  - Addon: an extra attached to an order -- wool insert, big runner
+    (spare sole), purse, headband, or gift card. Rendered separately from
+    OrderItems in the HTML report.
+
+NOTE (review, see PR): parse_order_item() below re-runs
+parse_order_item_data() on OrderItems that get_class() -> get_order_item()
+has *already* fully parsed, so every OrderItem is parsed twice per row.
+It's currently harmless (parse_order_item_data is idempotent -- it always
+recomputes from item.original_order_string, which never changes), but it's
+wasted work and a latent trap if that function is ever made to accumulate
+instead of overwrite. Flagged rather than fixed here -- see chat for the
+full write-up.
+"""
+
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict
 import re
@@ -20,6 +52,16 @@ from collections import defaultdict
 
 @dataclass()
 class Addon:
+    """
+    An extra attached to an order, distinct from the shoes themselves:
+    natural wool insert, big runner (spare/replacement sole), purse,
+    headband, or gift card. Which one is decided by get_class() matching a
+    keyword in helper.AddMarkers against the Shopify line item text.
+
+    add_type drives most of the downstream behavior (icon, category,
+    color/size extraction rules) -- see classify_addon() below.
+    """
+
     time_stamp: str
     original_order_string: str
     icon: Optional[str] = None
@@ -43,6 +85,13 @@ class Addon:
         self.size = size_tuple[1]
 
     def get_display(self):
+        """
+        Builds the label shown for this addon in its own row of the HTML
+        report: note emoji, category icon, color in parens, then whichever
+        of display_text / product_name / original_order_string is set
+        (in that priority order -- first one wins).
+        """
+
         ret_str = f""
         if self.note:
             ret_str += f"📝 {self.note}\n"
@@ -60,6 +109,12 @@ class Addon:
         return ret_str
 
     def get_order_piggyback_display(self):
+        """
+        Compact form of get_display() used when an addon is shown
+        "piggybacked" inline on its parent OrderItem's row instead of its
+        own row (no product name -- just note/icon/color/quantity).
+        """
+
         ret_str = f""
         if self.note:
             ret_str += f"📝"
@@ -75,6 +130,14 @@ class Addon:
 
 @dataclass
 class OrderItem:
+    """
+    A pair of shoes from one Shopify line item -- the thing actually being
+    produced. Everything from `age`/`measurement`/`variant`/
+    `variant_display`/`size_prefix` down to `colors` is populated (or, for
+    several of these fields, left at its default -- see review notes) by
+    parse_order_item_data() from the raw Shopify product string.
+    """
+
     time_stamp: str
     original_order_string: str
     order_num: Optional[str] = None
@@ -104,6 +167,13 @@ class OrderItem:
         self.size = size_tuple[1]
 
     def get_display(self):
+        """
+        Builds the label shown for this order item's own row in the HTML
+        report: note emoji, then whichever of display_text / product_name /
+        original_order_string is set, then an "X<quantity>" suffix if more
+        than one pair was ordered.
+        """
+
         ret_str = f""
         if self.note:
             ret_str += f"📝"
@@ -118,6 +188,13 @@ class OrderItem:
         return ret_str
 
     def get_tool_tip(self, add_ons):
+        """
+        Builds the hover tooltip for this order item: order number, the
+        raw Shopify product string, this item's note, then one line per
+        addon attached to the same order (via their get_display()).
+        Quotes are escaped since this gets embedded as an HTML attribute.
+        """
+
         tooltip_parts = list()
         tooltip_parts.append(f"Order {self.order_num}")
         tooltip_parts.append(self.original_order_string)
@@ -131,6 +208,12 @@ class OrderItem:
 
 @dataclass
 class Order:
+    """
+    NOTE (review): unused elsewhere in the codebase. Batch groups
+    OrderItems/Addons by order_num into plain dicts instead of ever
+    constructing one of these. Kept as-is; flagged as dead code in chat.
+    """
+
     time_stamp: str
     order_num: Optional[str] = None
     note: Optional[str] = None
@@ -141,12 +224,26 @@ class Order:
 
 @dataclass
 class Batch:
+    """
+    The full result of parsing one CSV: every OrderItem and Addon, grouped
+    by order_num, plus the reporting/lookup helpers makeHtml.py uses to
+    build the HTML tables (by category, by addon type, etc.).
+
+    Two flat lists (addOns_list / orders_list) are the source of truth,
+    fed in one row at a time via add_add_on()/add_order() as parse_orders()
+    works through the CSV. __post_init__ (and the same-named re-call at the
+    end of parse_orders(), once every row has been added) rebuilds the
+    order_num -> [items] groupings from those flat lists.
+    """
+
     addOns_list: List[Addon] = field(default_factory=list)
     orders_list: List[OrderItem] = field(default_factory=list)
     orderItems: Dict[str, List[OrderItem]] = field(init=False, default_factory=dict)
     orderAddons: Dict[str, List[Addon]] = field(init=False, default_factory=dict)
 
     def __post_init__(self):
+        """Rebuilds orderItems/orderAddons (order_num -> [items]) from the flat lists."""
+
         grouped_orders = defaultdict(list)
         grouped_addons = defaultdict(list)
 
@@ -184,6 +281,8 @@ class Batch:
         return result
 
     def get_headers(self) -> List[str]:
+        """Returns each distinct OrderItem.category seen, in first-seen order (used as HTML report section headers)."""
+
         result = dict()
 
         for item in self.get_all_order_items():
@@ -201,9 +300,13 @@ class Batch:
         return result
 
     def get_addon_category(self, category: str) -> List[Addon]:
+        """NOTE (review): unused -- get_addon_categorized() below is what makeHtml.py actually calls."""
+
         return self.orderAddons.get(category, [])
 
     def get_order_notes(self) -> List[tuple[str, str]]:
+        """NOTE (review): unused elsewhere in the codebase."""
+
         notes = []
 
         for items in self.orderItems.values():
@@ -214,6 +317,8 @@ class Batch:
         return notes
 
     def get_order_category(self, category: str) -> List[OrderItem]:
+        """All OrderItems whose category matches (used by makeHtml.py to build one table per category)."""
+
         orders = []
 
         for items in self.orderItems.values():
@@ -224,6 +329,8 @@ class Batch:
         return orders
 
     def get_addon_notes(self) -> List[tuple[str, str]]:
+        """NOTE (review): unused elsewhere in the codebase."""
+
         notes = []
 
         for items in self.orderAddons.values():
@@ -234,6 +341,15 @@ class Batch:
         return notes
 
     def get_addon_categorized(self):
+        """
+        Groups addons for the HTML report: by category normally, but by
+        "<category> <color>" for big runners (SOLE) specifically, since tan
+        and black big runners are cut/tracked separately. Gift cards are
+        dropped entirely -- they're not a production item. Also triggers
+        get_try_big_runner_size() as a side effect first, since that's what
+        fills in add.size for big runners before they're grouped/displayed.
+        """
+
         add_ons = self.get_all_addon_items()
         addon_rows = defaultdict(list)
         self.get_try_big_runner_size()
@@ -250,6 +366,30 @@ class Batch:
         return addon_rows
 
     def get_try_big_runner_size(self):
+        """
+        Big Runner (spare sole) line items don't carry their own size --
+        the customer is expected to want a size matching the shoes in the
+        same order. This best-effort infers that size by matching up big
+        runner add-ons with the OrderItems in the same order, one-to-one,
+        and copies the order note onto any addon that doesn't have its own.
+
+        Only proceeds if the order's shoe-pair count exactly matches its
+        total big runner count (tan + black) -- i.e. it can assume "one big
+        runner per pair" and doesn't have to guess which runner belongs to
+        which pair. If that assumption doesn't hold (total_runners > 0 but
+        doesn't match order count), it prints a warning and leaves those
+        addons' sizes unset rather than guessing wrong.
+
+        NOTE (review): reassigns the local `orders` variable partway
+        through from "the whole order_num -> [OrderItem] dict"
+        (self.get_orders()) to "this order's OrderItem list"
+        (self.get_order_item(order_num)) -- works today only because
+        order_nums was already captured into its own list first, but it's
+        a confusing name collision worth renaming if this gets touched
+        again. Also uses print() for its diagnostics instead of the
+        ParseEvent mechanism used everywhere else in the parsing pipeline.
+        """
+
         orders = self.get_orders()
         order_nums = list(orders.keys())
         for order_num in order_nums:
@@ -292,6 +432,8 @@ class Batch:
                 print(order_num, "can not figure out runner size!!!!!!!!!!!!!!!!!")
 
     def get_total_pairs(self):
+        """NOTE (review): unused elsewhere in the codebase. Total pairs of shoes across every OrderItem (quantity summed, defaulting missing quantity to 1)."""
+
         all_orders = self.get_all_order_items()
         total = 0
         for order in all_orders:
@@ -310,6 +452,15 @@ def get_class(
     note=None,
     order_num=None
 ):
+    """
+    First decision point for a CSV row: is this an Addon (wool insert, big
+    runner, purse, headband, gift card -- one of helper.AddMarkers) or a
+    plain OrderItem (shoes)? Decided purely by substring match against the
+    lowercased line item text; first marker to match wins, so if a product
+    name were ever to contain more than one marker keyword, whichever is
+    listed first in helper.AddMarkers takes priority.
+    """
+
     lower = (text or "").lower()
 
     for marker in helper.AddMarkers:
@@ -327,6 +478,8 @@ def get_class(
 
 
 def get_order_item(text, time_stamp, quantity=None, note=None, order_num=None):
+    """Builds a bare OrderItem from a CSV row and immediately runs it through parse_order_item_data() to fill in size/color/category."""
+
     order = OrderItem(
         time_stamp=time_stamp,
         original_order_string=text,
@@ -339,6 +492,8 @@ def get_order_item(text, time_stamp, quantity=None, note=None, order_num=None):
 
 
 def get_add_on_item(text, time_stamp, add_type, quantity=None, note=None, order_num=None):
+    """Builds a bare Addon from a CSV row and immediately runs it through classify_addon() to fill in icon/color/size/category."""
+
     add = Addon(
         time_stamp=time_stamp,
         original_order_string=text,
@@ -353,6 +508,15 @@ def get_add_on_item(text, time_stamp, add_type, quantity=None, note=None, order_
 
 
 def get_size_and_prefix(item, size_str):
+    """
+    Pulls the size block off the end of a product string and sets
+    item.size / item.prefix from it, e.g. "Some Product - 10" -> size="10",
+    or "Some Product - Kids 10" / "Some Product - W 8" -> a "kids"/"W"/"M"
+    prefix plus the numeric size. Returns size_str with the matched size
+    block stripped off (or unchanged if no size pattern was found -- not
+    every product line has one, e.g. addons or malformed product names).
+    """
+
     size_match = re.search(
         r'-\s*(?:(kids)|([WM]))?\s*(\d+(?:\.\d+)?)',
         size_str,
@@ -384,6 +548,8 @@ def classify_addon(item):
     item.category = helper.CATEGORY_MAP.get(item.add_type, helper.CATEGORY_MAP[helper.AddonType.UNKNOWN])
 
     if item.add_type == helper.AddonType.WOOL:
+        # wool insert size is just whatever follows " - " verbatim,
+        # e.g. "Natural Wool Insert - Small" -> "Small"
         if " - " in item.display_text:
             item.size = (
                 item.display_text
@@ -393,6 +559,8 @@ def classify_addon(item):
             )
 
     elif item.add_type == helper.AddonType.SOLE:
+        # big runner: color usually follows " - " ("Tan - Big Runner"),
+        # otherwise fall back to whatever precedes the "Big Runner" marker
         if " - " in item.display_text:
             item.color = get_color_end_hyphen(item)
         if item.color is None:
@@ -416,16 +584,23 @@ def classify_addon(item):
         item.size = "None"
 
     else:
+        # get_class() only ever passes an add_type it found in
+        # ADDON_TYPE_MAP, so this branch is effectively unreachable today;
+        # kept as a safety net in case that mapping and AddMarkers drift
+        # out of sync in the future.
         item.icon = "➕"
         item.add_type = helper.AddonType.UNKNOWN
         print("Missed one", item)
 
 
 def get_color_end_hyphen(item):
+    """Returns whatever follows the last " - " in display_text, e.g. "Tan - Big Runner" -> "Big Runner" (title-cased)."""
+
     return item.display_text.split(" - ")[-1].strip().title()
 
 
 def parse_gift_card(item, text):
+    """NOTE (review): unused elsewhere in the codebase -- gift cards are actually classified via get_class()'s AddMarkers.GIFT match, not this function."""
 
     if "gift card" not in text.lower():
         return
@@ -436,6 +611,7 @@ def parse_gift_card(item, text):
 
 
 def extract_big_runner_color(text):
+    """Fallback big-runner color extraction: whatever text precedes the "Big Runner" marker, e.g. "Tan Big Runner" -> "Tan"."""
 
     marker = "Big Runner"
 
@@ -451,6 +627,7 @@ def extract_big_runner_color(text):
 
 
 def extract_purse_color(text):
+    """Purse color extraction: whatever text precedes "purse" (case-insensitive), e.g. "Tan Purse" -> "Tan"."""
 
     marker = "purse"
 
@@ -481,6 +658,14 @@ def get_ignore_words():
 
 
 def extract_varient(text):
+    """
+    Matches known colors (config/colors.txt) against the variant block
+    (the part of the product string after " / ", which is Shopify's
+    "customer selected this option" field). Note this returns the matched
+    *lowercased full text* for each hit, not the color name itself --
+    see extract_colors() below for the version that returns color names.
+    Deduplicated via set(), so ordering isn't guaranteed.
+    """
 
     found = []
     colors = get_colors()
@@ -500,6 +685,14 @@ def extract_varient(text):
 
 
 def extract_colors(text):
+    """
+    Fallback color extraction used when the variant block (see
+    extract_varient()) didn't yield anything: scans the full original
+    product string for any known color name. Returns the matched color
+    names themselves (unlike extract_varient()). Deduplicated via set(),
+    so ordering isn't guaranteed.
+    """
+
     colors = get_colors()
     found = []
 
@@ -523,6 +716,19 @@ def extract_colors(text):
 # ----------------------------------------
 
 def extract_display_text(main_text, colors=None, variant_display=None):
+    """
+    Builds the human-readable product name shown in the report: strips
+    "(...)" option lists, tokenizes to words, drops anything in
+    config/ignore_words.txt (marketing filler like "Baby and Toddler") and
+    -- if colors were already extracted separately -- drops color words
+    too so they don't appear twice, then de-dupes while preserving first-
+    seen order. If colors were found, they're prepended to the result.
+
+    NOTE (review): the variant_display parameter is accepted but never
+    read in the body below -- dead parameter. OrderItem.variant_display is
+    also never assigned anywhere in this module, so it's always None
+    wherever it's passed in from parse_order_item_data().
+    """
 
     got_colors = get_colors()
     got_ignore = get_ignore_words()
@@ -566,6 +772,19 @@ def parse_order_item(
     note=None,
     order_num=None
 ):
+    """
+    Entry point used by parse_orders() for a single CSV row: classifies it
+    via get_class() (Addon or OrderItem) and, if it came back as an
+    OrderItem, runs parse_order_item_data() on it.
+
+    NOTE (review): get_class() -> get_order_item() already calls
+    parse_order_item_data() once before returning here, so this second
+    call re-parses the same OrderItem from scratch. Currently harmless
+    (parse_order_item_data always recomputes from
+    item.original_order_string rather than appending), but it's double
+    the work per order and worth collapsing to one call if this file gets
+    revisited.
+    """
 
     item = get_class(text, time_stamp, quantity, note, order_num)
     if isinstance(item, Addon):
@@ -575,6 +794,25 @@ def parse_order_item(
 
 
 def parse_order_item_data(item):
+    """
+    Fills in an OrderItem's derived fields from item.original_order_string:
+      1. Split on " / " -- text before is the product name + size block,
+         text after (if present) is the Shopify variant (the customer's
+         actual selected option).
+      2. Try to pull known colors out of the variant block first
+         (extract_varient); if that finds nothing, fall back to scanning
+         the whole original string (extract_colors).
+      3. Build the display product name (extract_display_text), then strip
+         the size block off the front part and set item.size/item.prefix
+         (get_size_and_prefix).
+      4. Match the remaining text against helper.CATEGORY to set
+         item.category (first match wins; None if nothing matches).
+
+    Idempotent: always recomputes from item.original_order_string, which
+    is never itself mutated here, so calling this twice on the same item
+    produces the same result (see parse_order_item() note above).
+    """
+
     item.colors = []
     parts = item.original_order_string.split(" / ")
     main = parts[0]
@@ -617,6 +855,26 @@ def parse_orders(
     notes=None,
     order_nums=None
 ):
+    """
+    Parses one CSV's worth of parallel column lists (each list index i is
+    one row) into a Batch, isolating each row so one bad/malformed row
+    can't take down the whole import.
+
+    Per row:
+      - blank Lineitem name -> skipped with a ParseEvent (no phantom item)
+      - non-numeric/blank quantity -> defaults to 1, with a ParseEvent
+      - missing/malformed order number or timestamp -> handled gracefully
+        rather than raising
+      - while debug_mode is False: rows at/before the last-processed
+        timestamp are skipped, and the newest timestamp seen is saved as
+        the new "last processed" marker once the whole batch finishes
+      - any other unexpected error in a row -> caught, logged as a
+        ParseEvent, and that row is skipped rather than aborting the batch
+
+    Returns (batch, events) -- events is the list of ParseEvent warnings/
+    errors collected along the way, for the GUI to display to the user.
+    """
+
     batch = Batch()
     events = list()
 
