@@ -290,6 +290,13 @@ class OrderParser:
                                        'and select open from the file chooser ',
                                        0, False)
 
+        # Always available, not just first-run -- lets the owner
+        # re-point the workspace directory without editing
+        # ~/.starry_knight_workspace by hand if it ever ends up pointing
+        # somewhere stale or wrong (e.g. a deleted temp directory).
+        self.tk.add_frame('Workspace', ['Reset Workspace Directory'],
+                          self.set_config_directory, self.window, True)
+
         self.processed_time_stamp = config.get_last_processed_timestamp_string()
         self.display_label_to_user('Last Processed Order Timestamp' + self.processed_time_stamp,
                                    0, False)
