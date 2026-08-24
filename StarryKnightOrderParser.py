@@ -96,6 +96,14 @@ class OrderParser:
         parse warnings/errors -> export_orders_html() -> display any
         report warnings -> archive the source CSV -> refresh the
         Last Processed Order Timestamp field.
+
+        Archiving (moving the CSV out of INPUT_CSV/ACTIVE into
+        INPUT_CSV/ARCHIVE) and the timestamp refresh are both skipped
+        while DEBUG mode is on (config/debug_mode.txt, default True) --
+        same as the "skip already-processed orders" behavior in
+        orderItem.parse_orders(). Otherwise every test run while debugging
+        would move the file out from under you and you'd have to keep
+        putting it back.
         """
 
         path = self.file.find_file()
@@ -190,10 +198,18 @@ class OrderParser:
                 reuse_lower_label=False
             )
 
-        config.archive_csv_file(path)
-        self.processed_time_stamp = config.get_last_processed_timestamp_string()
-        self.search_text.delete(0, "end")
-        self.search_text.insert(0, self.processed_time_stamp)
+        if config.get_debug_mode():
+            self.display_label_to_user(
+                "DEBUG mode is on -- not archiving the CSV or advancing the "
+                "processed-order timestamp (config/debug_mode.txt).",
+                urgency=1,
+                reuse_lower_label=False
+            )
+        else:
+            config.archive_csv_file(path)
+            self.processed_time_stamp = config.get_last_processed_timestamp_string()
+            self.search_text.delete(0, "end")
+            self.search_text.insert(0, self.processed_time_stamp)
 
     def display_label_to_user(self, message, urgency, reuse_lower_label):
         """
