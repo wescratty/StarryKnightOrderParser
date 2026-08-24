@@ -31,12 +31,16 @@ def get_size_and_prefix(item, size_str):
     Pulls the size block off the end of a product string and sets
     item.size / item.prefix from it, e.g. "Some Product - 10" -> size="10",
     or "Some Product - Kids 10" / "Some Product - W 8" -> a "Kids"/"W"/"M"
-    prefix plus the numeric size. The prefix is normalized to exactly
-    "Kids", "W", or "M" regardless of how it was typed/cased in the
-    Shopify product string (e.g. "kids"/"KIDS"/"w"/"m" all normalize) --
-    makeHtml.get_leather_order() does an exact-match check against these
-    values, so an unnormalized prefix would silently miscategorize that
-    order's leather counts.
+    prefix plus the numeric size. Adult sizes are sometimes spelled out in
+    full in the Shopify product string instead of abbreviated -- "Men 10.5"
+    or "Women 9"/"Womens 9" work the same as "M 10.5"/"W 9". The prefix is
+    always normalized down to exactly "Kids", "W", or "M" regardless of how
+    it was typed/cased in the source string (e.g. "kids"/"KIDS", "w"/"W",
+    "Men"/"mens"/"M" all normalize) -- makeHtml.get_leather_order() does an
+    exact-match check against these values, so an unnormalized prefix
+    would silently miscategorize that order's leather counts (this is what
+    caused adult "Men"/"Women" sizes to fall into the wrong bucket, or not
+    parse at all, before this was added).
 
     Returns size_str with the matched size block stripped off (or
     unchanged if no size pattern was found -- not every product line has
@@ -44,16 +48,22 @@ def get_size_and_prefix(item, size_str):
     """
 
     size_match = re.search(
-        r'-\s*(?:(kids)|([WM]))?\s*(\d+(?:\.\d+)?)',
+        r'-\s*(?:(kids)|(wom[ae]ns?|m[ae]ns?|[WM]))?\s*(\d+(?:\.\d+)?)',
         size_str,
         re.IGNORECASE
     )
 
     if size_match:
-        kids_prefix, wm_prefix, size_number = size_match.groups()
+        kids_prefix, adult_prefix, size_number = size_match.groups()
         item.size = size_number
-        raw_prefix = kids_prefix or wm_prefix
-        item.prefix = "Kids" if raw_prefix and raw_prefix.lower() == "kids" else (raw_prefix.upper() if raw_prefix else None)
+
+        if kids_prefix:
+            item.prefix = "Kids"
+        elif adult_prefix:
+            item.prefix = "W" if adult_prefix[0].lower() == "w" else "M"
+        else:
+            item.prefix = None
+
         size_str = size_str[:size_match.start()].strip()
 
     return size_str

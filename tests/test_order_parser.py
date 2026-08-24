@@ -38,6 +38,36 @@ def test_get_size_and_prefix_with_wm_prefix():
     assert item.prefix.lower() == "w"
 
 
+def test_get_size_and_prefix_with_spelled_out_men():
+    """
+    Regression test: adult Men's listings sometimes spell out "Men" instead
+    of abbreviating to "M" (e.g. "...Wool Insert included - Men 10.5 (foot
+    measures...)"). Previously only a single "M" character was recognized,
+    so "Men 10.5" failed to match the size pattern at all and the item came
+    out with size=None, prefix=None -- and, as a side effect, got miscounted
+    as a Toddler-bucket leather order instead of Adult.
+    """
+    item = _FakeItem()
+    orderParser.get_size_and_prefix(item, "Men's LOAFERS - Men 10.5 (foot measures 11\")")
+    assert item.size == "10.5"
+    assert item.prefix == "M"
+
+
+def test_get_size_and_prefix_with_spelled_out_women():
+    item = _FakeItem()
+    orderParser.get_size_and_prefix(item, "Women's BLOSSOMS - Women 9 (foot measures 10\")")
+    assert item.size == "9"
+    assert item.prefix == "W"
+
+
+def test_get_size_and_prefix_with_womens_no_apostrophe():
+    # seen verbatim in real CSV data: "...for Any size - Womens 9"
+    item = _FakeItem()
+    orderParser.get_size_and_prefix(item, "Some Product - Womens 9")
+    assert item.size == "9"
+    assert item.prefix == "W"
+
+
 # ----------------------------------------
 # parse_order_item_data
 # ----------------------------------------

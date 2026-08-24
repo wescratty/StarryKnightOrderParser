@@ -235,19 +235,46 @@ def make_details_html(main_display, tooltip):
 
 def sort_size(add):
     """
-    Sort key for shoe/addon sizes: numeric toddler sizes and explicit
-    "kids" sizes sort first (by number), then men's ("M"), then women's
-    ("W"). Anything with no size, or a size that doesn't match the
-    expected pattern, sorts last.
+    Sort key for shoe/addon sizes. Regular numeric baby/toddler sizes sort
+    first (tier 0, by number); Big Kids ("Kids"), then men's ("M"), then
+    women's ("W") sizes all sort into their own tiers *after* every
+    toddler size, rather than being interleaved with them by raw number --
+    per the owner's request, since adult/Big Kids sizes aren't small and
+    are hard to spot when scattered through the toddler range. Anything
+    with no size, or a size that doesn't match the expected pattern, sorts
+    last of all.
+
+    OrderItem.prefix is already normalized to exactly None/"Kids"/"W"/"M"
+    by orderParser.get_size_and_prefix(), so it's used directly here when
+    present. Addon objects don't populate .prefix -- their WOOL size text
+    (e.g. "Kids 2.5", "Womens 9") still carries the prefix word embedded
+    in the size string itself, so those fall back to parsing it out the
+    same way get_size_and_prefix() does.
     """
+
+    prefix_order = {
+        None: 0,     # numeric toddler/baby sizes: 1, 2, 3...
+        "Kids": 1,   # Big Kids
+        "M": 2,      # men's
+        "W": 3,      # women's
+    }
 
     if not add.size:
         return 99, 999
 
     size = str(add.size).strip()
+    explicit_prefix = getattr(add, "prefix", None)
+
+    if explicit_prefix:
+        number_match = re.match(r'(\d+(?:\.\d+)?)$', size)
+        number = number_match.group(1) if number_match else None
+        return (
+            prefix_order.get(explicit_prefix, 99),
+            float(number) if number else 999
+        )
 
     match = re.match(
-        r'(?:(kids)|([WM]))?\s*(\d+(?:\.\d+)?)$',
+        r'(?:(kids)|(wom[ae]ns?|m[ae]ns?|[WM]))?\s*(\d+(?:\.\d+)?)$',
         size,
         re.IGNORECASE
     )
@@ -255,21 +282,14 @@ def sort_size(add):
     if not match:
         return 99, 999
 
-    kids_prefix, wm_prefix, number = match.groups()
+    kids_prefix, adult_prefix, number = match.groups()
 
     if kids_prefix:
-        prefix = "K"
-    elif wm_prefix:
-        prefix = wm_prefix.upper()
+        prefix = "Kids"
+    elif adult_prefix:
+        prefix = "W" if adult_prefix[0].lower() == "w" else "M"
     else:
-        prefix = ""
-
-    prefix_order = {
-        "": 0,   # numeric toddler sizes: 1, 2, 3...
-        "K": 0,  # explicit "kids 2.5"
-        "M": 1,
-        "W": 2,
-    }
+        prefix = None
 
     return (
         prefix_order.get(prefix, 99),

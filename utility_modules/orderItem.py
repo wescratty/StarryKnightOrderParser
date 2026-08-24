@@ -54,6 +54,18 @@ def get_class(
     name were ever to contain more than one marker keyword, whichever is
     listed first in helper.AddMarkers takes priority.
 
+    The wool insert marker is a special case: adult (Women's/Men's) and
+    Big Kids shoe listings describe the bundled wool insert right in their
+    own product name ("...Wool Insert included - W7 (foot measures...)"),
+    which would otherwise false-positive against a plain "wool insert"
+    substring check and get misclassified as an addon instead of a pair of
+    shoes. What sets those apart is specifically the word "included" right
+    after "wool insert" -- no real wool-insert *addon* line phrases it that
+    way, whether it's the plain "Natural Wool Insert - Small" form or the
+    "ADD//...Wool Insert//..." form (with or without "Natural"), so
+    "wool insert included" is excluded rather than requiring any one
+    prefix format.
+
     Returns a fully-populated Addon or OrderItem -- get_add_on_item()/
     get_order_item() run the corresponding field extraction before
     returning, so the result of this function never needs re-parsing.
@@ -62,7 +74,12 @@ def get_class(
     lower = (text or "").lower()
 
     for marker in helper.AddMarkers:
-        if marker.value in lower:
+        if marker == helper.AddMarkers.WOOL:
+            matched = "wool insert" in lower and "wool insert included" not in lower
+        else:
+            matched = marker.value in lower
+
+        if matched:
             return get_add_on_item(
                 text=text,
                 time_stamp=time_stamp,

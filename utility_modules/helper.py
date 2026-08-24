@@ -55,6 +55,7 @@ CATEGORY = [
     "T-strap",
     "RAINEY",
     "BELLA",
+    "Blossoms",
     "Mary",
     "SEQ",
     "SUN",
@@ -73,7 +74,20 @@ CATEGORY = [
 
 
 class AddMarkers(Enum):
-    """Keywords orderItem.get_class() matches (case-insensitive substring) to classify a CSV row as an Addon rather than an OrderItem. First match wins."""
+    """
+    Keywords orderItem.get_class() matches (case-insensitive substring) to
+    classify a CSV row as an Addon rather than an OrderItem. First match
+    wins.
+
+    WOOL is a special case in get_class() -- it isn't matched as a plain
+    substring like the others, since adult/Big Kids shoe listings mention
+    "Wool Insert included" right in their own product name and would
+    false-positive against a bare "wool insert" check. See get_class()'s
+    docstring for the actual matching rule (it excludes "wool insert
+    included" rather than requiring a specific addon-name prefix, since
+    real wool-insert addons show up both as "Natural Wool Insert - Small"
+    and "ADD//...Wool Insert//...").
+    """
 
     WOOL = "natural wool insert"
     BIG_RUNNER = "big runner"

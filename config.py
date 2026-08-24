@@ -380,6 +380,27 @@ DEFAULT_IGNORE_WORDS = [
     "on",
     "with",
     "designs",
+
+    # Added for the adult/Big Kids "...Darker Colors// Pick Your Color &
+    # Size// Wool Insert included - W7 (foot measures...)" style listings --
+    # without these, that marketing text was leaking into the displayed
+    # product name (see also the new "blossoms" CATEGORY keyword and the
+    # size-parsing fix for spelled-out "Men"/"Women" sizes).
+    "blossoms",
+    "colors",
+    "darker",
+    "foot",
+    "included",
+    "insert",
+    "length",
+    "measures",
+    "men",
+    "mens",
+    "size",
+    "wool",
+    "women",
+    "womens",
+    "your",
 ]
 
 
