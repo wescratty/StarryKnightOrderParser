@@ -6,7 +6,11 @@ user to pick a workspace directory (saved in BOOTSTRAP_FILE, in the user's
 home directory); load_paths()/initialize_app() then create/locate the
 config/, INPUT_CSV/{ACTIVE,ARCHIVE}/, OUTPUT_HTML/, and logs/ folders
 under it. Also handles timestamp parsing/validation for the "last
-processed order" feature, and the persisted DEBUG mode setting.
+processed order" feature. Whether to archive the CSV / advance that
+timestamp on a given run is controlled by the "Archive" checkbox in the
+GUI (StarryKnightOrderParser.py), passed straight into
+utility_modules.orderItem.parse_orders() -- it's no longer a persisted
+config file setting (see the removed DEBUG mode / config/debug_mode.txt).
 """
 
 import sys
@@ -31,13 +35,7 @@ LOG_DIR = None
 COLORS_FILE = None
 IGNORE_WORDS_FILE = None
 PROCESSED_FILE = None
-DEBUG_FILE = None
 processed_time_stamp = None
-
-# Default DEBUG mode when no workspace/config file exists yet. True keeps
-# the historical hardcoded behavior (skip-already-processed feature off,
-# every order reprocessed) until the user opts in via the config file.
-DEFAULT_DEBUG_MODE = True
 
 # ----------------------------------------
 # bootstrap file
@@ -170,7 +168,7 @@ def get_last_processed_timestamp():
 
 
 def set_last_processed_timestamp(ts):
-    """Validates and persists a new last-processed timestamp (used both by the GUI's Set button and automatically by orderItem.parse_orders() when debug_mode is False)."""
+    """Validates and persists a new last-processed timestamp (used both by the GUI's Set button and automatically by orderItem.parse_orders() when the Archive checkbox is checked)."""
 
     global processed_time_stamp
 
@@ -607,7 +605,6 @@ def load_paths():
     global COLORS_FILE
     global IGNORE_WORDS_FILE
     global PROCESSED_FILE
-    global DEBUG_FILE
 
     APP_ROOT = get_workspace_path()
 
@@ -631,8 +628,6 @@ def load_paths():
     IGNORE_WORDS_FILE = CONFIG_DIR / "ignore_words.txt"
 
     PROCESSED_FILE = CONFIG_DIR / "processed_orders.txt"
-
-    DEBUG_FILE = CONFIG_DIR / "debug_mode.txt"
 
     return True
 
@@ -684,70 +679,6 @@ def initialize_app():
 
     ensure_empty_file(PROCESSED_FILE)
 
-    ensure_text_file(
-        DEBUG_FILE,
-        [str(DEFAULT_DEBUG_MODE)]
-    )
-
     print("App initialization complete.")
 
     return True
-
-
-# ----------------------------------------
-# debug mode
-# ----------------------------------------
-
-
-def get_debug_mode():
-    """
-    Reads DEBUG mode from the workspace config file (config/debug_mode.txt).
-    True: reprocess every order in the CSV every run (skip-already-processed
-    feature is off).
-    False: skip orders at/before the Last Processed Order Timestamp, and
-    update that timestamp after a successful run.
-    Falls back to DEFAULT_DEBUG_MODE if no workspace/config file exists yet
-    or the file can't be parsed as a bool.
-    """
-
-    if not DEBUG_FILE or not DEBUG_FILE.exists():
-        return DEFAULT_DEBUG_MODE
-
-    with open(DEBUG_FILE, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip().lower()
-
-            # ignore empty/comment lines (ensure_text_file writes a
-            # "# Auto-generated..." header on first creation)
-            if not line or line.startswith("#"):
-                continue
-
-            if line in ("true", "1", "yes", "on"):
-                return True
-
-            if line in ("false", "0", "no", "off"):
-                return False
-
-    return DEFAULT_DEBUG_MODE
-
-
-def set_debug_mode(value):
-    """
-    Persists DEBUG mode to the workspace config file.
-    """
-
-    if not DEBUG_FILE:
-        return {
-            "success": False,
-            "message": "Workspace not initialized."
-        }
-
-    with open(DEBUG_FILE, "w", encoding="utf-8") as f:
-        f.write(str(bool(value)))
-
-    print(f"Saved DEBUG mode: {bool(value)}")
-
-    return {
-        "success": True,
-        "message": f"DEBUG mode set to {bool(value)}."
-    }

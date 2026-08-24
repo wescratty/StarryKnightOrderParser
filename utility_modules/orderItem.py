@@ -33,10 +33,10 @@ from utility_modules.addonParser import get_add_on_item
 from utility_modules.orderParser import get_order_item
 
 
-# DEBUG mode lives in config (config.get_debug_mode() / config.set_debug_mode()),
-# persisted to a workspace file. While it's True, the "skip already-processed
-# orders" feature is off and every order in the CSV is reprocessed regardless
-# of the Last Processed Order Timestamp shown in the GUI.
+# parse_orders()'s `archive` parameter (see its docstring) controls the
+# "skip already-processed orders" behavior -- it's passed in by the caller
+# (the GUI's Archive checkbox) rather than read from a persisted config
+# file, so nothing here needs to know about the GUI at all.
 
 
 def get_class(
@@ -117,7 +117,8 @@ def parse_orders(
     timestamps=None,
     quantities=None,
     notes=None,
-    order_nums=None
+    order_nums=None,
+    archive=False
 ):
     """
     Parses one CSV's worth of parallel column lists (each list index i is
@@ -129,9 +130,14 @@ def parse_orders(
       - non-numeric/blank quantity -> defaults to 1, with a ParseEvent
       - missing/malformed order number or timestamp -> handled gracefully
         rather than raising
-      - while debug_mode is False: rows at/before the last-processed
+      - while `archive` is True: rows at/before the last-processed
         timestamp are skipped, and the newest timestamp seen is saved as
-        the new "last processed" marker once the whole batch finishes
+        the new "last processed" marker once the whole batch finishes --
+        this mirrors the GUI's "Archive" checkbox (checked by default),
+        which also moves the source CSV into INPUT_CSV/ARCHIVE (see
+        StarryKnightOrderParser.load_csv()). Leave it False (the default
+        here) to reprocess every order regardless of what's already been
+        handled, e.g. for a one-off test/preview run.
       - any other unexpected error in a row -> caught, logged as a
         ParseEvent, and that row is skipped rather than aborting the batch
 
@@ -143,7 +149,6 @@ def parse_orders(
     events = list()
 
     last_processed = config.load_last_processed_timestamp()
-    debug_mode = config.get_debug_mode()
 
     newest_timestamp = None
 
@@ -191,7 +196,7 @@ def parse_orders(
             if notes:
                 note = notes[i]
 
-            if ts and not debug_mode:
+            if ts and archive:
 
                 current_dt = config.timestamp_to_datetime(ts)
 
@@ -243,7 +248,7 @@ def parse_orders(
     # save newest processed timestamp
     # ----------------------------------------
 
-    if not debug_mode and newest_timestamp:
+    if archive and newest_timestamp:
         config.set_last_processed_timestamp(
             newest_timestamp.strftime(
                 "%Y-%m-%d %H:%M:%S"

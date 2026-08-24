@@ -33,7 +33,7 @@ structure there automatically:
 
 ```
 <workspace>/
-  config/              # colors.txt, ignore_words.txt, processed_orders.txt, debug_mode.txt
+  config/              # colors.txt, ignore_words.txt, processed_orders.txt
   INPUT_CSV/
     ACTIVE/             # drop new orders_export.csv files here
     ARCHIVE/            # processed CSVs are moved here automatically
@@ -51,9 +51,11 @@ From the GUI: **Load CSV Order**, then select your `orders_export.csv` from
   Toddler", "Leather", etc.) out of the displayed product name.
 - **`config/processed_orders.txt`** — the timestamp of the last successfully processed order.
   Editable from the GUI (there's format validation on the input).
-- **`config/debug_mode.txt`** — `True` (default) reprocesses every order in the CSV on every
-  run. Set to `False` to skip orders at or before the last-processed timestamp and have that
-  timestamp advance automatically after a successful run.
+- **Archive checkbox** (next to Last Processed Order Timestamp in the GUI, checked by
+  default) — archives the source CSV into `INPUT_CSV/ARCHIVE` and advances the
+  last-processed timestamp after a successful run, skipping any order at or before it.
+  Uncheck it to reprocess a CSV as a one-off test/preview run without moving the file or
+  advancing the timestamp.
 
 ## Product naming conventions
 

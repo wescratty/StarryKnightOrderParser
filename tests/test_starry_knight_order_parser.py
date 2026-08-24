@@ -1,6 +1,7 @@
 """
 Tests for StarryKnightOrderParser.OrderParser.load_csv -- specifically the
-DEBUG-mode gating around archiving the source CSV.
+"Archive" checkbox gating around archiving the source CSV and advancing
+the Last Processed Order Timestamp.
 
 Builds an OrderParser instance without going through __init__/main() (which
 would need a real Tk window), wiring just what load_csv touches: a real
@@ -16,7 +17,7 @@ import StarryKnightOrderParser as skop
 from utility_modules import fileHelper
 
 
-def _make_app(csv_path):
+def _make_app(csv_path, archive):
     app = skop.OrderParser.__new__(skop.OrderParser)
     app.file = fileHelper.FileHelper()
     app.file.find_file = lambda: str(csv_path)
@@ -28,6 +29,7 @@ def _make_app(csv_path):
     app.user_label = None
     app.var_info_label = None
     app.message_notify = ['#00FF00', 'white', 'yellow', 'red', 'blue']
+    app.archive_var = MagicMock(get=lambda: archive)
     return app
 
 
@@ -47,29 +49,28 @@ def _write_csv(path):
         })
 
 
-def test_debug_mode_on_does_not_archive_the_csv(workspace):
+def test_archive_unchecked_does_not_archive_the_csv(workspace):
     """
     Regression test: archive_csv_file() used to run unconditionally on
-    every load, regardless of DEBUG mode, so a file kept getting moved out
-    from under the owner every time she reloaded it while debugging.
+    every load, regardless of DEBUG mode (now the "Archive" checkbox), so
+    a file kept getting moved out from under the owner every time she
+    reloaded it while testing.
     """
 
     csv_path = workspace / "orders.csv"
     _write_csv(csv_path)
 
-    config.set_debug_mode(True)
-    app = _make_app(csv_path)
+    app = _make_app(csv_path, archive=False)
     app.load_csv(None)
 
     assert csv_path.exists()
 
 
-def test_debug_mode_off_archives_the_csv_and_advances_timestamp(workspace):
+def test_archive_checked_archives_the_csv_and_advances_timestamp(workspace):
     csv_path = workspace / "orders.csv"
     _write_csv(csv_path)
 
-    config.set_debug_mode(False)
-    app = _make_app(csv_path)
+    app = _make_app(csv_path, archive=True)
     app.load_csv(None)
 
     assert not csv_path.exists()
