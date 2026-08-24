@@ -68,6 +68,54 @@ CATEGORY = [
     "Scout"
 ]
 
+# Style/collection-name words that also show up, on occasion, as a print or
+# pattern name on a *different* category's product (e.g. a "Daisy" print on
+# a Mary Janes shoe: "Daisy Mary Janes Shoes with Designs" -- category
+# ends up "Mary", but "Daisy" isn't boilerplate here, it's the one piece of
+# real information in the name). orderParser.extract_display_text() only
+# drops one of these words from the displayed text when it matches the
+# item's OWN assigned category (via CATEGORY_DISPLAY_STRIP below); when it
+# doesn't match, it's kept rather than being blanket-filtered like the
+# generic marketing words in config.load_ignore_words().
+COLLECTION_NAME_WORDS = {
+    "lotus", "t", "strap",
+    "rainey",
+    "bella",
+    "blossoms",
+    "mary", "jane", "janes",
+    "sequoia",
+    "sunrise",
+    "daisy",
+    "mocc", "moccs",
+    "two", "tone",
+    "loafer", "loafers",
+    "scout", "booties",
+}
+
+# CATEGORY value -> the COLLECTION_NAME_WORDS that belong to *that*
+# category's own name, so extract_display_text() knows which one(s) to
+# treat as redundant with the category (already shown as the table/section
+# header) rather than as a distinguishing print name. Deliberately doesn't
+# include "Designs"/"Critters" -- those are always-generic boilerplate
+# ("...Shoes with Designs" is a suffix shared by many differently-named
+# prints), not collision-prone style names, so they stay in the plain
+# ignore-words list instead.
+CATEGORY_DISPLAY_STRIP = {
+    "Lotus": {"lotus"},
+    "T-strap": {"t", "strap"},
+    "RAINEY": {"rainey", "jane", "janes"},
+    "BELLA": {"bella", "jane", "janes"},
+    "Blossoms": {"blossoms"},
+    "Mary": {"mary", "jane", "janes"},
+    "SEQ": {"sequoia"},
+    "SUN": {"sunrise"},
+    "Daisy": {"daisy"},
+    "Moccs": {"mocc", "moccs"},
+    "Two tone": {"two", "tone"},
+    "Loafer": {"loafer", "loafers"},
+    "Scout": {"scout", "booties"},
+}
+
 # ----------------------------------------
 # Maps and Filters
 # ----------------------------------------

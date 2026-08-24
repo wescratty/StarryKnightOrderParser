@@ -4,6 +4,7 @@ row order within each collection's table on the report) and the
 Big Kids/Men's/Women's group-divider rows built on top of it.
 """
 
+from utility_modules import helper
 from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, Table, _Divider
 from utility_modules.models import OrderItem, Addon, Batch
 
@@ -108,6 +109,83 @@ def test_mixed_tier_table_gets_divider_rows():
     table = report.tables[0]
     dividers = [row.label for row in table.rows if isinstance(row, _Divider)]
     assert dividers == ["Toddler", "Big Kids", "Men's", "Women's"]
+
+
+def test_purse_addon_does_not_piggyback_onto_unrelated_shoe_in_same_order():
+    """
+    Regression test for a real production report: a Critters shoe and a
+    Purse add-on sharing an order number (a common Shopify multi-item
+    order) used to get combined on the shoe's row, since every addon on
+    the same order number was piggybacked regardless of type -- correct
+    for WOOL/SOLE (things that literally attach to a specific pair) but
+    wrong for a standalone accessory like PURSE, which has its own report
+    table and shouldn't be stamped onto an unrelated shoe purchase.
+    """
+
+    shoe = OrderItem(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string="Papaya Fox// Cute Critters Leather Shoes",
+        order_num="59243",
+        category="Critters",
+        size="10",
+        display_text="papaya Fox",
+    )
+    purse = Addon(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string="Big Sky Mountains Leather PURSE Toddler & Kids",
+        order_num="59243",
+        add_type=helper.AddonType.PURSE,
+        icon="👜",
+        color="Big Sky Mountains",
+        display_text="",
+    )
+
+    batch = Batch()
+    batch.add_order(shoe)
+    batch.add_add_on(purse)
+    batch.__post_init__()
+
+    report = build_main_table_html(batch)
+    table = report.tables[0]
+    html = "".join(str(row) for row in table.rows)
+
+    # the tooltip (hover-only) legitimately still lists every addon on the
+    # order, including the purse -- only the always-visible <summary> row
+    # text is what must not be stamped with the unrelated purse's info
+    import re
+    summaries = re.findall(r"<summary>(.*?)</summary>", html)
+
+    assert any("papaya Fox" in s for s in summaries)
+    assert not any("Big Sky Mountains" in s for s in summaries)
+
+
+def test_wool_addon_still_piggybacks_onto_its_shoe():
+    shoe = OrderItem(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string="Some Shoe",
+        order_num="2001",
+        category="Loafer",
+        size="6",
+        display_text="tan",
+    )
+    wool = Addon(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string="Natural Wool Insert - Small",
+        order_num="2001",
+        add_type=helper.AddonType.WOOL,
+        icon="🐑",
+    )
+
+    batch = Batch()
+    batch.add_order(shoe)
+    batch.add_add_on(wool)
+    batch.__post_init__()
+
+    report = build_main_table_html(batch)
+    table = report.tables[0]
+    html = "".join(str(row) for row in table.rows)
+
+    assert "🐑" in html
 
 
 def test_single_tier_table_gets_no_dividers():

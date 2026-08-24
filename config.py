@@ -320,6 +320,7 @@ DEFAULT_COLORS = [
     "papaya",
     "pink",
     "platinum",
+    "rhubarb",
     "rose blush",
     "russet",
     "rust",
@@ -401,6 +402,14 @@ DEFAULT_IGNORE_WORDS = [
     "women",
     "womens",
     "your",
+
+    # "Big Kids ..." listings repeat the size-tier words in the product's
+    # own header, not just the size block (which get_size_and_prefix()
+    # already strips) -- e.g. "Big Kids BELLA Janes // Pick Your Color &
+    # Size - kids 3". The tier is already shown by its own group-divider
+    # row in the report now, so it's redundant here too.
+    "big",
+    "kids",
 ]
 
 

@@ -236,9 +236,20 @@ def build_main_table_html(batch):
 
                 add_ons = batch.get_order_addon_items(order_num=order.order_num)
 
+                # Only WOOL/SOLE addons piggyback onto a shoe row -- those
+                # literally attach to a specific pair, so showing them
+                # inline on that pair's row makes sense. PURSE/HEADBAND/
+                # GIFT are standalone accessory items with their own
+                # report table; they just happen to share an order number
+                # with an unrelated shoe purchase, so piggybacking them
+                # here would incorrectly stamp e.g. a purse's info onto a
+                # completely different shoe in the same order.
+                piggyback_types = (helper.AddonType.WOOL, helper.AddonType.SOLE)
+
                 if len(add_ons):
                     for add in add_ons:
-                        display = f"{add.get_order_piggyback_display()}{display}"
+                        if add.add_type in piggyback_types:
+                            display = f"{add.get_order_piggyback_display()}{display}"
 
                 tooltip = order.get_tool_tip(add_ons)
 
