@@ -17,9 +17,16 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+class _Divider:
+    """A full-width group-label row (e.g. "Big Kids") inside a Table, rendered as its own <tr> spanning every column instead of one cell per column. See Table.add_divider()."""
+
+    def __init__(self, label):
+        self.label = label
+
+
 @dataclass
 class Table:
-    """One HTML <table>: a title, column headers, and rows (each row a list of cell values)."""
+    """One HTML <table>: a title, column headers, and rows (each row a list of cell values, or a _Divider group label spanning the full row)."""
 
     title: str
     columns: list[str]
@@ -27,6 +34,11 @@ class Table:
 
     def add(self, row):
         self.rows.append(row)
+
+    def add_divider(self, label):
+        """Adds a full-width group-label row, e.g. to mark where Big Kids/Men's/Women's sizes start within an otherwise-toddler-sized table."""
+
+        self.rows.append(_Divider(label))
 
 
 @dataclass
@@ -80,6 +92,12 @@ class Report:
 
         # Rows
         for row in table.rows:
+            if isinstance(row, _Divider):
+                html.append(
+                    f'<tr class="size-group-row"><td class="size-group" colspan="{len(table.columns)}">{row.label}</td></tr>'
+                )
+                continue
+
             html.append("<tr>")
             html.extend(f"<td>{value}</td>" for value in row)
             html.append("</tr>")
@@ -183,6 +201,13 @@ def build_main_table_html(batch):
     description is a collapsible <details> (see make_details_html())
     showing the piggybacked add-on summary and the full tooltip on
     expand/hover.
+
+    When a category's table mixes toddler sizes with Big Kids/Men's/
+    Women's ones, a full-width group-divider row (e.g. "Big Kids") is
+    inserted right before that group starts, so the size jump is obvious
+    at a glance instead of just a size number that looks out of place --
+    per the owner's request. A single-tier table (the common case) gets no
+    dividers at all, since there's nothing to distinguish.
     """
 
     report = Report("Shoes", max_rows=13)
@@ -193,7 +218,17 @@ def build_main_table_html(batch):
         if len(cat_orders):
             table = Table(header, ["Size", "Description"])
 
-            for order in sorted(cat_orders, key=sort_size):
+            sorted_orders = sorted(cat_orders, key=sort_size)
+            tiers_present = {get_size_tier(o)[0] for o in sorted_orders}
+            last_tier = None
+
+            for order in sorted_orders:
+                tier, label, _number = get_size_tier(order)
+
+                if len(tiers_present) > 1 and tier != last_tier:
+                    table.add_divider(label or "Other")
+                    last_tier = tier
+
                 html = f"<div class='report-section'>"
 
                 size = order.size
@@ -233,16 +268,20 @@ def make_details_html(main_display, tooltip):
     return size_html
 
 
-def sort_size(add):
+_SIZE_TIERS = {
+    None: (0, "Toddler"),   # numeric toddler/baby sizes: 1, 2, 3...
+    "Kids": (1, "Big Kids"),
+    "M": (2, "Men's"),
+    "W": (3, "Women's"),
+}
+
+
+def get_size_tier(item):
     """
-    Sort key for shoe/addon sizes. Regular numeric baby/toddler sizes sort
-    first (tier 0, by number); Big Kids ("Kids"), then men's ("M"), then
-    women's ("W") sizes all sort into their own tiers *after* every
-    toddler size, rather than being interleaved with them by raw number --
-    per the owner's request, since adult/Big Kids sizes aren't small and
-    are hard to spot when scattered through the toddler range. Anything
-    with no size, or a size that doesn't match the expected pattern, sorts
-    last of all.
+    Classifies an OrderItem/Addon's size into (tier, label, number):
+    tier/label are one of _SIZE_TIERS' (index, name) pairs -- (99, None)
+    if there's no size or it doesn't match the expected pattern -- and
+    number is the parsed numeric size (None if there wasn't one to parse).
 
     OrderItem.prefix is already normalized to exactly None/"Kids"/"W"/"M"
     by orderParser.get_size_and_prefix(), so it's used directly here when
@@ -250,28 +289,24 @@ def sort_size(add):
     (e.g. "Kids 2.5", "Womens 9") still carries the prefix word embedded
     in the size string itself, so those fall back to parsing it out the
     same way get_size_and_prefix() does.
+
+    Used both for sort_size() (the tier index) and for the "Big Kids"/
+    "Men's"/"Women's" group-divider rows build_main_table_html() and
+    get_add_on_report() insert into each table, so a size only ever needs
+    classifying in one place.
     """
 
-    prefix_order = {
-        None: 0,     # numeric toddler/baby sizes: 1, 2, 3...
-        "Kids": 1,   # Big Kids
-        "M": 2,      # men's
-        "W": 3,      # women's
-    }
+    if not item.size:
+        return 99, None, None
 
-    if not add.size:
-        return 99, 999
-
-    size = str(add.size).strip()
-    explicit_prefix = getattr(add, "prefix", None)
+    size = str(item.size).strip()
+    explicit_prefix = getattr(item, "prefix", None)
 
     if explicit_prefix:
         number_match = re.match(r'(\d+(?:\.\d+)?)$', size)
-        number = number_match.group(1) if number_match else None
-        return (
-            prefix_order.get(explicit_prefix, 99),
-            float(number) if number else 999
-        )
+        number = float(number_match.group(1)) if number_match else None
+        tier, label = _SIZE_TIERS.get(explicit_prefix, (99, None))
+        return tier, label, number
 
     match = re.match(
         r'(?:(kids)|(wom[ae]ns?|m[ae]ns?|[WM]))?\s*(\d+(?:\.\d+)?)$',
@@ -280,7 +315,7 @@ def sort_size(add):
     )
 
     if not match:
-        return 99, 999
+        return 99, None, None
 
     kids_prefix, adult_prefix, number = match.groups()
 
@@ -291,10 +326,28 @@ def sort_size(add):
     else:
         prefix = None
 
-    return (
-        prefix_order.get(prefix, 99),
-        float(number)
-    )
+    tier, label = _SIZE_TIERS.get(prefix, (99, None))
+    return tier, label, float(number)
+
+
+def sort_size(item):
+    """
+    Sort key for shoe/addon sizes. Regular numeric baby/toddler sizes sort
+    first (tier 0, by number); Big Kids, then men's, then women's sizes
+    all sort into their own tiers *after* every toddler size, rather than
+    being interleaved with them by raw number -- per the owner's request,
+    since adult/Big Kids sizes aren't small and are hard to spot when
+    scattered through the toddler range. Anything with no size, or a size
+    that doesn't match the expected pattern, sorts last of all. See
+    get_size_tier() for the actual tier/number classification.
+    """
+
+    tier, _label, number = get_size_tier(item)
+
+    if number is None:
+        return 99, 999
+
+    return tier, number
 
 
 def export_orders_html(batch: Batch, filename="orders.html"):
@@ -381,7 +434,7 @@ def get_date_range(orders):
 
 
 def get_add_on_report(batch):
-    """Builds the add-ons Report (one Table per category/color grouping) and returns (report, events) -- events flags any order whose big runner size couldn't be inferred."""
+    """Builds the add-ons Report (one Table per category/color grouping) and returns (report, events) -- events flags any order whose big runner size couldn't be inferred. Group-divider rows are inserted the same way as build_main_table_html() when a group (e.g. wool inserts) mixes toddler with Big Kids/Men's/Women's sizes."""
 
     add_ons_dict, events = batch.get_addon_categorized()
     add_report = Report(max_rows=15)
@@ -389,18 +442,25 @@ def get_add_on_report(batch):
         add_list = add_ons_dict[add_key]
         title = add_key
         columns = ["Order Number", "Size", "Description"]
-        rows = []
-        for add in sorted(add_list, key=sort_size):
+
+        sorted_adds = sorted(add_list, key=sort_size)
+        tiers_present = {get_size_tier(a)[0] for a in sorted_adds}
+        last_tier = None
+
+        table = Table(title=title, columns=columns)
+        for add in sorted_adds:
+            tier, label, _number = get_size_tier(add)
+
+            if len(tiers_present) > 1 and tier != last_tier:
+                table.add_divider(label or "Other")
+                last_tier = tier
+
             size = 999
             if add.size:
                 size = add.size
-            rows.append([add.order_num, size, add.get_display()])
+            table.add([add.order_num, size, add.get_display()])
 
-        add_report.add(Table(
-            title=title,
-            columns=columns,
-            rows=rows
-        ))
+        add_report.add(table)
     return add_report, events
 
 
@@ -507,6 +567,21 @@ def get_preamble(date_range_text):
 
             td {{
                 min-width: 30px;
+            }}
+
+            /* Big Kids/Men's/Women's group-divider row -- see
+               makeHtml.Table.add_divider() / _Divider */
+            td.size-group {{
+                background-color: #333333;
+                color: #ffffff;
+                font-weight: bold;
+                text-align: center;
+                padding: 4px 6px;
+            }}
+
+            tr.size-group-row {{
+                break-inside: avoid;
+                page-break-inside: avoid;
             }}
 
             /* =========================

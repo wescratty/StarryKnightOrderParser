@@ -1,10 +1,11 @@
 """
-Tests for utility_modules.makeHtml.sort_size -- the sort key that decides
-row order within each collection's table on the report.
+Tests for utility_modules.makeHtml.sort_size (the sort key that decides
+row order within each collection's table on the report) and the
+Big Kids/Men's/Women's group-divider rows built on top of it.
 """
 
-from utility_modules.makeHtml import sort_size
-from utility_modules.models import OrderItem, Addon
+from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, Table, _Divider
+from utility_modules.models import OrderItem, Addon, Batch
 
 
 def _order(size, prefix):
@@ -64,3 +65,62 @@ def test_addon_wool_size_with_embedded_kids_prefix_still_groups_correctly():
 
     ordered = sorted([kids_addon, womens_addon, toddler_addon], key=sort_size)
     assert [a.size for a in ordered] == ["5", "Kids 2.5", "Womens 9"]
+
+
+# ----------------------------------------
+# get_size_tier / group-divider rows
+# ----------------------------------------
+
+def test_get_size_tier_labels():
+    assert get_size_tier(_order("6", None))[1] == "Toddler"
+    assert get_size_tier(_order("2.5", "Kids"))[1] == "Big Kids"
+    assert get_size_tier(_order("10.5", "M"))[1] == "Men's"
+    assert get_size_tier(_order("7", "W"))[1] == "Women's"
+    assert get_size_tier(_order(None, None))[1] is None
+
+
+def _category_batch(items):
+    batch = Batch()
+    for item in items:
+        batch.add_order(item)
+    batch.__post_init__()
+    return batch
+
+
+def test_mixed_tier_table_gets_divider_rows():
+    """
+    A category with both toddler and adult/Big Kids sizes must get a
+    group-divider row inserted right before each new tier starts, so the
+    size jump is obvious at a glance -- per the owner's follow-up request
+    after the first sort-order fix ("we have kids, mens and then womens in
+    the same table... add some kind of a group... so at a glance its easy
+    to tell").
+    """
+
+    items = [_order("2", None), _order("6", None), _order("2.5", "Kids"), _order("10.5", "M"), _order("7", "W")]
+    for item in items:
+        item.category = "Loafer"
+        item.order_num = "1"
+
+    batch = _category_batch(items)
+    report = build_main_table_html(batch)
+
+    table = report.tables[0]
+    dividers = [row.label for row in table.rows if isinstance(row, _Divider)]
+    assert dividers == ["Toddler", "Big Kids", "Men's", "Women's"]
+
+
+def test_single_tier_table_gets_no_dividers():
+    # every item is a plain toddler size -- nothing to distinguish, so no
+    # divider rows should be added at all
+    items = [_order("2", None), _order("4", None), _order("6", None)]
+    for item in items:
+        item.category = "Loafer"
+        item.order_num = "1"
+
+    batch = _category_batch(items)
+    report = build_main_table_html(batch)
+
+    table = report.tables[0]
+    dividers = [row for row in table.rows if isinstance(row, _Divider)]
+    assert dividers == []
