@@ -38,6 +38,18 @@ from utility_modules.orderParser import get_order_item
 # (the GUI's Archive checkbox) rather than read from a persisted config
 # file, so nothing here needs to know about the GUI at all.
 
+# Addon types whose color extraction can genuinely fail (a brand-new
+# product string shape that doesn't match what
+# addonParser.classify_addon() expects yet) -- used by parse_orders() to
+# flag it as a warning. WOOL never sets .color at all (it doesn't need
+# one), and GIFT hardcodes it to "None" on purpose, so neither belongs
+# here -- both would be permanent false positives.
+_COLOR_REQUIRED_ADDON_TYPES = (
+    helper.AddonType.SOLE,
+    helper.AddonType.PURSE,
+    helper.AddonType.HEADBAND,
+)
+
 
 def get_class(
     text,
@@ -138,6 +150,14 @@ def parse_orders(
         StarryKnightOrderParser.load_csv()). Leave it False (the default
         here) to reprocess every order regardless of what's already been
         handled, e.g. for a one-off test/preview run.
+      - an OrderItem with no matching category, no extractable size, or
+        a color-bearing Addon whose color extraction failed -> the item
+        still goes into the batch (nothing is silently dropped), but a
+        ParseEvent flags it -- these are the telltale signs of a
+        genuinely new product string shape the parser hasn't been taught
+        about yet (a new collection name, a new size format, etc.), so
+        it surfaces immediately as a warning instead of only being
+        noticed later as a garbled or missing row in the report.
       - any other unexpected error in a row -> caught, logged as a
         ParseEvent, and that row is skipped rather than aborting the batch
 
@@ -231,8 +251,41 @@ def parse_orders(
 
             if isinstance(item, Addon):
                 batch.add_add_on(item)
+
+                if item.add_type in _COLOR_REQUIRED_ADDON_TYPES and item.color in (None, "None"):
+                    events.append(helper.ParseEvent(
+                        level=1,
+                        message=f"Could not determine a color for this add-on -- check for a new/unrecognized product format: {text!r}",
+                        order_num=row_order_num_raw,
+                        timestamp=ts
+                    ))
+
             elif isinstance(item, OrderItem):
                 batch.add_order(item)
+
+                # Both of these mean the product string didn't match
+                # anything the parser currently knows about -- most
+                # likely a brand-new collection name or size format never
+                # seen before. The item still makes it into the batch (so
+                # nothing is silently lost), but flagging it here means a
+                # genuinely new format shows up as a warning in the GUI
+                # right away instead of being noticed later as a garbled
+                # or missing row in the report.
+                if item.category is None:
+                    events.append(helper.ParseEvent(
+                        level=1,
+                        message=f"Could not match a category for this product -- check for a new/unrecognized collection name: {text!r}",
+                        order_num=row_order_num_raw,
+                        timestamp=ts
+                    ))
+
+                if item.size is None:
+                    events.append(helper.ParseEvent(
+                        level=1,
+                        message=f"Could not determine a size for this product -- check for a new/unrecognized size format: {text!r}",
+                        order_num=row_order_num_raw,
+                        timestamp=ts
+                    ))
 
         except Exception as exc:
             events.append(helper.ParseEvent(

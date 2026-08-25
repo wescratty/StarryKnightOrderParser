@@ -116,6 +116,82 @@ def test_missing_order_num_column_value_does_not_crash(workspace):
     assert items[0].order_num is None
 
 
+# ----------------------------------------
+# unrecognized-format warnings
+# ----------------------------------------
+#
+# The parser has been repeatedly surprised by new real-world product
+# string shapes (a new collection name, "Men 10.5" spelled out instead of
+# "M 10.5", etc.) -- these tests confirm that the *next* new shape shows
+# up as a visible warning instead of silently vanishing from the report
+# or getting miscounted.
+
+def test_unmatched_category_and_size_are_flagged(workspace):
+    batch, events = oi.parse_orders(
+        order_strings=["Totally New Collection Shoes with no size info at all"],
+        timestamps=["2026-01-01 10:00:00"],
+        order_nums=["#9001"],
+    )
+
+    items = batch.get_all_order_items()
+    assert len(items) == 1
+    # still makes it into the batch -- nothing silently dropped
+    assert items[0].category is None
+    assert items[0].size is None
+
+    messages = [e.message.lower() for e in events]
+    assert any("category" in m for m in messages)
+    assert any("size" in m for m in messages)
+
+
+def test_recognized_category_and_size_produce_no_warnings(workspace):
+    batch, events = oi.parse_orders(
+        order_strings=["Lotus Shoe - 10"],
+        timestamps=["2026-01-01 10:00:00"],
+        order_nums=["#9002"],
+    )
+
+    items = batch.get_all_order_items()
+    assert items[0].category == "Lotus"
+    assert items[0].size == "10"
+    assert events == []
+
+
+def test_addon_color_extraction_failure_is_flagged():
+    """
+    A Big Runner line with neither the usual " - " suffix nor a
+    recognizable "big runner" marker text to extract a color from --
+    e.g. a genuinely new phrasing for this product.
+    """
+
+    batch, events = oi.parse_orders(
+        order_strings=["Big Runner Add-On (color TBD)"],
+        timestamps=["2026-01-01 10:00:00"],
+        order_nums=["#9003"],
+    )
+
+    addons = batch.get_all_addon_items()
+    assert len(addons) == 1
+    assert addons[0].color == "None"
+
+    messages = [e.message.lower() for e in events]
+    assert any("color for this add-on" in m for m in messages)
+
+
+def test_wool_and_gift_addons_are_never_flagged_for_missing_color():
+    # WOOL never extracts a color at all, and GIFT hardcodes "None" on
+    # purpose -- neither is a genuine parsing failure and must not spam
+    # a warning every single time.
+    batch, events = oi.parse_orders(
+        order_strings=["Natural Wool Insert - Small", "Gift Card - $25"],
+        timestamps=["2026-01-01 10:00:00"] * 2,
+        order_nums=["#9004", "#9005"],
+    )
+
+    assert len(batch.get_all_addon_items()) == 2
+    assert events == []
+
+
 def test_happy_path_end_to_end(workspace):
     cols = load_csv_columns(FIXTURES_DIR / "happy_path.csv")
 
