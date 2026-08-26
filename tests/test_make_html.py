@@ -5,14 +5,15 @@ Big Kids/Men's/Women's group-divider rows built on top of it.
 """
 
 from utility_modules import helper
-from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, Table, _Divider
+from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, get_bottoms_report, Table, _Divider
 from utility_modules.models import OrderItem, Addon, Batch
 
 
-def _order(size, prefix):
+def _order(size, prefix, quantity=1):
     item = OrderItem(time_stamp="", original_order_string="")
     item.size = size
     item.prefix = prefix
+    item.quantity = quantity
     return item
 
 
@@ -270,3 +271,87 @@ def test_no_size_at_all_does_not_get_a_forced_divider():
     table = report.tables[0]
     dividers = [row.label for row in table.rows if isinstance(row, _Divider)]
     assert dividers == []
+
+
+# ----------------------------------------
+# get_bottoms_report
+# ----------------------------------------
+
+def test_bottoms_report_tallies_pairs_by_size_across_categories():
+    """
+    Bottom/sole leather is cut the same color no matter the shoe's own
+    category or color, so the owner asked for one flat by-size tally
+    across every category combined, with a Total row -- e.g. two
+    different categories both selling size 3 shoes must add into the
+    same "3" row rather than needing to be added up by hand across
+    separate category tables.
+    """
+
+    orders = [
+        _order("3", None, quantity=5),
+        _order("3", None, quantity=4),   # different category/color, same size -- must combine
+        _order("4", None, quantity=2),
+    ]
+
+    report = get_bottoms_report(orders)
+    table = report.tables[0]
+
+    assert table.rows[0] == ["3", 9]
+    assert table.rows[1] == ["4", 2]
+    assert table.rows[-1] == ["<b>Total</b>", "<b>11</b>"]
+
+
+def test_bottoms_report_labels_adult_and_big_kids_sizes_distinctly():
+    """
+    A toddler size "3" and a Big Kids/Men's/Women's size that happens to
+    share the same number must NOT be merged into one row -- bottoms are
+    cut to different dimensions per tier even at the "same" size number.
+    """
+
+    orders = [
+        _order("3", None, quantity=2),          # toddler
+        _order("3", "Kids", quantity=1),        # Big Kids -- same number, different tier
+        _order("10.5", "M", quantity=1),
+        _order("9", "W", quantity=1),
+    ]
+
+    report = get_bottoms_report(orders)
+    table = report.tables[0]
+    labels = [row[0] for row in table.rows]
+
+    assert "3" in labels
+    assert "Big Kids 3" in labels
+    assert "Men's 10.5" in labels
+    assert "Women's 9" in labels
+    # confirm the toddler and Big Kids "3" rows stayed separate, not merged
+    assert table.rows[labels.index("3")][1] == 2
+    assert table.rows[labels.index("Big Kids 3")][1] == 1
+
+
+def test_bottoms_report_sorts_toddler_before_kids_men_women():
+    orders = [
+        _order("9", "W", quantity=1),
+        _order("2", None, quantity=1),
+        _order("10.5", "M", quantity=1),
+        _order("2.5", "Kids", quantity=1),
+    ]
+
+    report = get_bottoms_report(orders)
+    table = report.tables[0]
+    labels = [row[0] for row in table.rows if row[0] != "<b>Total</b>"]
+
+    assert labels == ["2", "Big Kids 2.5", "Men's 10.5", "Women's 9"]
+
+
+def test_bottoms_report_groups_missing_size_as_unknown():
+    orders = [
+        _order("3", None, quantity=2),
+        _order(None, None, quantity=1),
+    ]
+
+    report = get_bottoms_report(orders)
+    table = report.tables[0]
+    labels = [row[0] for row in table.rows]
+
+    assert "Unknown" in labels
+    assert table.rows[-1] == ["<b>Total</b>", "<b>3</b>"]

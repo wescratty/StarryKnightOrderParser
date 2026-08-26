@@ -2,9 +2,10 @@
 utility_modules/makeHtml.py
 
 Renders a parsed Batch (see utility_modules.models) into the production
-cut-sheet HTML report: a per-category shoe table, a leather/color-count
-summary, an add-ons table, and a per-order checklist view. Writes the
-result to OUTPUT_HTML/orders.html and opens it in the browser.
+cut-sheet HTML report: a per-category shoe table, a by-size bottoms/sole
+cutting summary, a leather/color-count summary, an add-ons table, and a
+per-order checklist view. Writes the result to OUTPUT_HTML/orders.html
+and opens it in the browser.
 """
 
 import re
@@ -420,6 +421,10 @@ def export_orders_html(batch: Batch, filename="orders.html"):
 
     html += build_main_table_html(batch).make(4)
 
+    html += '''<h2>Bottoms</h2>'''
+    bottoms_report = get_bottoms_report(orders)
+    html += bottoms_report.make(max_tables=5)
+
     html += '''<h2>Leather Order</h2>'''
     size_report = get_leather_order(orders)
     html += size_report.make(max_tables=5)
@@ -500,6 +505,70 @@ def get_add_on_report(batch):
 
         add_report.add(table)
     return add_report, events
+
+
+def _bottom_size_label(order):
+    """
+    Label for one row of the "Bottoms" table (see get_bottoms_report()):
+    the bare size for a plain toddler size ("3", matching what's shown on
+    that order's own size button), or "<tier> <size>" for a Big Kids/
+    Men's/Women's size ("Big Kids 2.5", "Men's 10.5", "Women's 9") so
+    those don't collide with a same-numbered toddler size in the same
+    table. "Unknown" for an item with no usable size at all.
+    """
+
+    if not order.size:
+        return "Unknown"
+
+    tier, tier_label, _number = get_size_tier(order)
+
+    if tier_label and tier != 0:
+        return f"{tier_label} {order.size}"
+
+    return str(order.size)
+
+
+def get_bottoms_report(orders):
+    """
+    Builds the "Bottoms" table: total pairs needed per size across every
+    category and color combined. The bottom/sole leather is cut the same
+    color regardless of the shoe's own color, so this lets the owner cut
+    the whole order's bottoms in one batch by size instead of hunting
+    across every category's table. Sorted the same way as sort_size()
+    (toddler sizes ascending, then Big Kids, then Men's, then Women's),
+    with a bolded Total row at the end.
+    """
+
+    counts = defaultdict(int)
+    sample_order_for_label = {}
+
+    for order in orders:
+        label = _bottom_size_label(order)
+        counts[label] += order.quantity or 0
+
+        # keep one representative item per label so sort_size() has
+        # something real to sort by
+        if label not in sample_order_for_label:
+            sample_order_for_label[label] = order
+
+    table = Table("Bottoms", ["Size", "Qty"])
+
+    sorted_labels = sorted(
+        counts.keys(),
+        key=lambda label: sort_size(sample_order_for_label[label])
+    )
+
+    total = 0
+    for label in sorted_labels:
+        qty = counts[label]
+        total += qty
+        table.add([label, qty])
+
+    table.add(["<b>Total</b>", f"<b>{total}</b>"])
+
+    bottoms_report = Report()
+    bottoms_report.add(table)
+    return bottoms_report
 
 
 def get_leather_order(orders):
