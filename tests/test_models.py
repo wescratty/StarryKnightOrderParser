@@ -27,6 +27,48 @@ def make_big_runner(order_num, color):
     )
 
 
+def test_order_item_get_display_empty_string_does_not_fall_back_to_raw_text():
+    """
+    Regression test: display_text="" (extract_display_text() legitimately
+    filtered everything away) used to be treated the same as
+    display_text=None (never computed) by a truthy check, so get_display()
+    incorrectly fell all the way back to the fully unfiltered
+    product_name/original_order_string instead of showing blank.
+    """
+
+    item = OrderItem(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string="Some Raw Unfiltered Product Name - 3",
+        product_name="Some Raw Unfiltered Product Name",
+        display_text="",
+    )
+
+    assert item.get_display() == ""
+
+
+def test_order_item_get_display_none_still_falls_back_to_product_name():
+    item = OrderItem(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string="Some Raw Unfiltered Product Name - 3",
+        product_name="Some Raw Unfiltered Product Name",
+        display_text=None,
+    )
+
+    assert item.get_display() == "Some Raw Unfiltered Product Name"
+
+
+def test_addon_get_display_empty_string_does_not_fall_back_to_raw_text():
+    add = Addon(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string="Big Sky Mountains Leather PURSE Toddler & Kids",
+        icon="👜",
+        color="Big Sky Mountains",
+        display_text="",
+    )
+
+    assert add.get_display() == "👜(Big Sky Mountains)"
+
+
 def test_big_runner_size_inferred_when_counts_match():
     batch = Batch()
     batch.add_order(make_order_item("1001", "8"))

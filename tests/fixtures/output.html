@@ -1,0 +1,1645 @@
+
+<!-- saved from url=(0118)file:///C:/Users/Wes/AppData/Local/Temp/pytest-of-Wes/pytest-1/test_get_debug_mode_reads_defa0/OUTPUT_HTML/orders.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+        <title>Orders</title>
+
+        <style>
+
+            /* =========================
+               BASE LAYOUT
+            ========================== */
+
+            body {
+                transform: scale(0.95);
+                transform-origin: top left;
+                font-family: Arial;
+                padding: 20px;
+            }
+
+            h2 {
+                margin-top: 40px;
+            }
+
+            /* =========================
+               TABLE STYLES
+            ========================== */
+
+            table {
+                font-size: 12px;
+                border-collapse: collapse;
+                width: 100%;
+                margin-bottom: 40px;
+            }
+
+            th, td {
+                border: 1px solid black;
+                padding: 6px;
+                vertical-align: top;
+            }
+
+            th {
+                background-color: #dddddd;
+            }
+
+            td {
+                min-width: 30px;
+            }
+
+            /* =========================
+               LIST STYLES (TABLE CELLS)
+            ========================== */
+
+            ul {
+                margin: 0;
+                padding-left: 12px;
+            }
+
+            li {
+                margin-bottom: 4px;
+            }
+
+            /* only apply hover in interactive (non-print) mode */
+            li:hover {
+                background-color: #f0f0f0;
+            }
+
+            li.has-note {
+                font-weight: bold;
+                color: #0056b3;
+                font-size: 14px;
+            }
+            div.has-note {
+                font-weight: bold;
+                color: #0056b3;
+                font-size: 14px;
+            }
+
+            /* =========================
+               REPORT BLOCKS
+            ========================== */
+
+            .report-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            /* =========================
+               ORDER LIST VIEW
+            ========================== */
+
+            .order-list {
+                list-style: none;
+                padding-left: 0;
+                font-size: 11px;
+            }
+
+            .order {
+                border: 1px solid #ddd;
+                padding: 10px;
+                margin-bottom: 0;
+                border-radius: 6px;
+                break-inside: avoid;
+                page-break-inside: avoid;
+                cursor: pointer;
+                width: 100%;
+                height: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .order.active {
+                background: #ffff99;
+            }
+
+            .order.active::after {
+                content: attr(data-tooltip);
+                white-space: pre-wrap;
+
+                position: absolute;
+                top: 100%;
+                left: 0;
+
+                z-index: 1000;
+
+                background: white;
+                border: 1px solid black;
+                padding: 8px;
+                min-width: 250px;
+            }
+
+            .order-header {
+                font-weight: bold;
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            .order-items {
+                list-style: none;
+                padding-left: 10px;
+            }
+            .order.red {
+                background-color: #ff9999;
+            }
+            .order.yellow {
+                background-color: #FFBF00;
+            }
+
+            .order.gray {
+                background-color: #d3d3d3;
+            }
+
+            .order.green {
+                background-color: #90ee90;
+            }
+
+            .order-item {
+                margin-bottom: 4px;
+            }
+
+            .addons-section {
+                margin-top: 8px;
+            }
+
+            .addon-header {
+                font-weight: bold;
+                font-size: 13px;
+                margin-top: 6px;
+            }
+
+            .addons {
+                list-style: none;
+                padding-left: 12px;
+            }
+
+            .note {
+                font-weight: bold;
+                color: #0056b3;
+                font-size: 14px;
+                margin-left: 10px;
+            }
+
+            /* =========================
+               PRINT RULES
+            ========================== */
+
+            @media print {
+
+                @page {
+                    size: landscape;
+                    margin: 0.5in;
+                }
+
+                thead {
+                    display: table-header-group;
+                }
+
+                .page-break {
+                    break-before: page;
+                    page-break-before: always;
+                }
+
+
+                /* safer than page-breaking full tables */
+                tr {
+                    page-break-inside: avoid;
+                }
+
+                /* disable hover effects in print */
+                li:hover {
+                    background-color: transparent;
+                }
+            }
+
+        </style>
+    <script>
+            const colors = ["", "yellow", "green", "red", "gray"];
+
+            document.addEventListener("click", function(e) {
+                const order = e.target.closest(".order");
+
+                if (!order) return;
+
+                let index = parseInt(order.dataset.color || "0");
+
+                order.classList.remove("red", "gray", "green", "yellow");
+
+                index = (index + 1) % colors.length;
+
+                if (colors[index]) {
+                    order.classList.add(colors[index]);
+                }
+
+                order.dataset.color = index;
+            });
+        </script></head>
+
+
+    <body>
+    <h1>Order Summary 2026-08-16 12:26:16 - 2026-08-23 20:12:32</h1>
+
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Critters</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        2
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sahara Bear</summary>
+                    <pre>Order 59205
+Sahara Bear // Cute Critters Leather Shoes Baby and Toddler - 2   (6m)4.5"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>📝russet Bear</summary>
+                    <pre>Order 59234
+Russet Bear // Cute Critters Leather Shoes Baby and Toddler - 4   (12m)5"
+Hello! This is a gift so please do not include prices or receipt.
+
+If you could put a note that says "From Jayne and Isaac, to Greyson"
+
+Thanks!</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Bunnies Bunny</summary>
+                    <pre>Order 59261
+Bunnies // Cute Critters Leather Shoes Baby and Toddler Bunny - 4   (12m)5"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Kitties Cat Kitty</summary>
+                    <pre>Order 59213
+Kitties // Cute Critters Leather Shoes Baby and Toddler Cat Kitty - 5   (15m)5.25"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)📝👟(Tan)Doggies Brown Dog Dogs</summary>
+                    <pre>Order 59282
+Doggies Brown // Cute Critters Leather Shoes Baby and Toddler Dog Dogs - 9   (3yr)6.5"
+
+📝 The black soles are for the Whale shoes, the tan soles are for the Dog Shoes.
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        10
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👜(Big Sky Mountains Leather Purse Toddler &amp; Kids)papaya Fox</summary>
+                    <pre>Order 59243
+Papaya Fox// Cute Critters Leather Shoes Baby and Toddler - 10    (4yr)7"
+
+👜(Big Sky Mountains Leather Purse Toddler &amp; Kids)Big Sky Mountains Leather PURSE Toddler &amp; Kids</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Loafer</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        00
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>📝iron</summary>
+                    <pre>Order 59206
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 00 (tiny)3.65" / Iron
+this is a gift for a boy, would like the gray or blue if possible.  thank you.</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        1.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>navy Big Kids Your Size kids measures</summary>
+                    <pre>Order 59268
+Big Kids LOAFERS Shoes// Pick Your Color &amp; Size - kids 1.5 ( foot measures 8")shoe measures 8.25" / Navy</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>milk left Spring Neutrals</summary>
+                    <pre>Order 59223
+Spring Neutrals Leather Loafers Shoes Baby and Toddler - 3   (9m)4.75" / Milk left</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)📝chestnut Big Kids Your Size kids</summary>
+                    <pre>Order 59232
+Big Kids LOAFERS Shoes// Pick Your Color &amp; Size - kids 3 / W4.5 (foot measures 8.5") shoes measures 8.75" / Chestnut
+Do you guys still do the rewards program? I thought I had a lot of points but don’t see any. Just curious!
+👟(Tan)TAN Big Runner Add to Men's, Women’s &amp; Big Kids//Rubber Sole to Shoes</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)navy</summary>
+                    <pre>Order 59247
+Loafer Baby and Toddler Shoes(Big Sky, Navy,Grey, Black) - 3   (9m)4.75" / Navy
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑navy</summary>
+                    <pre>Order 59217
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 4   (12m)5" / Navy
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑lichen</summary>
+                    <pre>Order 59217
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 4   (12m)5" / Lichen
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sienna</summary>
+                    <pre>Order 59225
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 4   (12m)5" / Sienna (top R)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chai</summary>
+                    <pre>Order 59228
+Chai LOAFERS Leather Shoes Baby and Toddler - 4   (12m)5" / Chai</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑rust (reddish brown)</summary>
+                    <pre>Order 59217
+Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 5   (15m)5.25" / Rust (reddish brown)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑w. wood (lighter)</summary>
+                    <pre>Order 59217
+Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 5   (15m)5.25" / W. Wood (lighter)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>navy</summary>
+                    <pre>Order 59221
+Loafer Baby and Toddler Shoes(Big Sky, Navy,Grey, Black) - 5   (15m)5.25" / Navy</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>rust (reddish brown)</summary>
+                    <pre>Order 59233
+Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 5   (15m)5.25" / Rust (reddish brown)</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Loafer</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🎀(Daffodil Daisy Flower Headband)sahara</summary>
+                    <pre>Order 59264
+Sahara LOAFERS Leather Shoes Baby and Toddler - 5   (15m)5.25" / Sahara
+
+🎀(Daffodil Daisy Flower Headband)Daffodil Daisy Flower Headband</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)sienna</summary>
+                    <pre>Order 59212
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 6    (18m)5.5" / Sienna (top R)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)caramel</summary>
+                    <pre>Order 59214
+Sepia, Caramel, Chai Leather LOAFERS Shoes Baby and Toddler - 6    (18m)5.5" / Caramel
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑russet</summary>
+                    <pre>Order 59217
+Tumbleweed, Chestnut, Russet Loafers Shoes Baby and Toddler - 6    (18m)5.5" / russet(right)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑tumbleweed</summary>
+                    <pre>Order 59217
+Tumbleweed, Chestnut, Russet Loafers Shoes Baby and Toddler - 6    (18m)5.5" / tumbleweed(left)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>lichen</summary>
+                    <pre>Order 59265
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 6    (18m)5.5" / Lichen</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>saddle(medium brown)</summary>
+                    <pre>Order 59239
+Latte, Saddle, Sable Leather LOAFERS Shoes Baby and Toddler - 7   (24m)5.75" / Saddle(medium brown)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sable</summary>
+                    <pre>Order 59239
+Sable LOAFERS Leather Shoes Baby and Toddler - 7   (24m)5.75" / sable</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sienna</summary>
+                    <pre>Order 59240
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 7   (24m)5.75" / Sienna (top R)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)chestnut</summary>
+                    <pre>Order 59263
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 7   (24m)5.75" / Chestnut (bottom L)
+
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>iron</summary>
+                    <pre>Order 59283
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 7   (24m)5.75" / Iron</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>w. wood (lighter)</summary>
+                    <pre>Order 59207
+Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 8   (2yr)6" / W. Wood (lighter)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>📝🐑caramel</summary>
+                    <pre>Order 59231
+Caramel LOAFERS Leather Shoes Baby and Toddler - 8   (2yr)6"
+
+📝 Could you please make the elastics around the ankles looser? Thanks!
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 8</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Loafer</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)sepia</summary>
+                    <pre>Order 59241
+Sepia, Caramel, Chai Leather LOAFERS Shoes Baby and Toddler - 8   (2yr)6" / Sepia(left)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)chai</summary>
+                    <pre>Order 59246
+Chai LOAFERS Leather Shoes Baby and Toddler - 8   (2yr)6" / Chai
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)navy</summary>
+                    <pre>Order 59273
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 8   (2yr)6" / Navy
+
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>latte (tan)</summary>
+                    <pre>Order 59277
+Latte, Saddle, Sable Leather LOAFERS Shoes Baby and Toddler - 8   (2yr)6" / latte (tan)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)sepia</summary>
+                    <pre>Order 59278
+Sepia LOAFERS Leather Shoes Baby and Toddler - 8   (2yr)6" / Sepia
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)caramel</summary>
+                    <pre>Order 59214
+Sepia, Caramel, Chai Leather LOAFERS Shoes Baby and Toddler - 9   (3yr)6.5" / Caramel
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sahara</summary>
+                    <pre>Order 59235
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 9   (3yr)6.5" / Sahara (top L)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)tumbleweed</summary>
+                    <pre>Order 59252
+Tumbleweed, Chestnut, Russet Loafers Shoes Baby and Toddler - 9   (3yr)6.5" / tumbleweed(left)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑👟(Tan)sienna</summary>
+                    <pre>Order 59262
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 9   (3yr)6.5" / Sienna
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 9
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 11</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)chestnut</summary>
+                    <pre>Order 59271
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 9   (3yr)6.5" / Chestnut (bottom L)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        10
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)sienna</summary>
+                    <pre>Order 59271
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 10    (4yr)7" / Sienna (top R)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        11
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑👟(Tan)sienna</summary>
+                    <pre>Order 59262
+Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 11 (5yr) 7.5" / Sienna
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 9
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 11</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        11
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>honey</summary>
+                    <pre>Order 59269
+Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 11 (5yr)7.5" / Honey (bottom R)</pre>
+                </details>
+                </div></td></tr></tbody></table></div></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Loafer</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        12
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>big sky  Big Sky</summary>
+                    <pre>Order 59275
+Lichen, Navy, Big Sky LOAFERS Leather Shoes Baby and Toddler - 12-13(6yr)8" / Big Sky (top L)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        None
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>tumbleweed Men s Darker Colors Your Size Wool Insert included length</summary>
+                    <pre>Order 59222
+Men's LOAFERS Darker Colors// Pick Your Color &amp; Size// Wool Insert included - Men 10.5 (foot measures 11”) shoe length 11.25” / Tumbleweed</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>T-strap</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Rose Blush</summary>
+                    <pre>Order 59258
+Rose  Blush T-Strap Shoes Baby and Toddler - 3   (9m)4.75"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🎀(Daffodil Daisy Flower Headband)dusty rose Dusty Rose</summary>
+                    <pre>Order 59264
+Dusty Rose T-Strap Shoes Baby and Toddler - 5   (15m)5.25"
+
+🎀(Daffodil Daisy Flower Headband)Daffodil Daisy Flower Headband</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Cherry Red</summary>
+                    <pre>Order 59242
+Cherry Red T-Strap Shoes Baby and Toddler - 8   (2yr)6"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑👟(Tan)Rhubarb</summary>
+                    <pre>Order 59248
+Rhubarb T-Strap Shoes Baby and Toddler - 8   (2yr)6" / Rhubarb
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 8</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)honey</summary>
+                    <pre>Order 59208
+Honey T-Strap Shoes Baby and Toddler - 9   (3yr)6.5"
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        10
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Rose Blush</summary>
+                    <pre>Order 59268
+Rose  Blush T-Strap Shoes Baby and Toddler - 10    (4yr)7"</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>RAINEY</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        00
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>oyster</summary>
+                    <pre>Order 59279
+Oyster RAINEY JANES  Shoes Baby and Toddler - 00 (tiny)3.65" / Oyster</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        2
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>oyster</summary>
+                    <pre>Order 59216
+Oyster RAINEY JANES  Shoes Baby and Toddler - 2   (6m)4.5" / Oyster</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        2
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>milk off white</summary>
+                    <pre>Order 59218
+Milk &amp; Barley RAINEY JANES  Shoes Baby and Toddler - 2   (6m)4.5" / Milk off white</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        2.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)📝Big Kids Your Size kids measures</summary>
+                    <pre>Order 59244
+Big Kids Rainey Janes // Pick Your Color &amp; Size - kids 2.5 (foot measures 8.25") shoe measures 8.5" / Rhubarb / RAINEY JANES
+Hi!  Can we please have the Rainey Janes version that has stitching coming from the outer edge of the shoe and includes three half flowers?  I noticed there were two styles in the main photo and my daughter really wants this one, so though I'd make sure :)  Thank you for keeping her feet happy for the seventh year now!
+👟(Black)BLACK Big Runner Add to Men's,Women’s &amp; Big Kids//Rubber Sole to Shoes</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>📝👟(Tan)caramel</summary>
+                    <pre>Order 59224
+Caramel RAINEY JANES Shoes Baby and Toddler - 3   (9m)4.75"
+
+📝 Please make milk t strap in iron leather, sole on this pair.
+
+Size 3 Rainey Jane no sole.
+
+Thank you!
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)saddle(mid brown)</summary>
+                    <pre>Order 59209
+Sable &amp; Saddle RAINEY JANES Shoes Baby and Toddler - 4   (12m)5" / Saddle(mid brown)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sahara</summary>
+                    <pre>Order 59236
+Sahara RAINEY JANES  Shoes Baby and Toddler - 6    (18m)5.5" / Sahara</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chestnut Women s Darker Colors Your Size Wool Insert included W length</summary>
+                    <pre>Order 59222
+Women's RAINEY Janes Darker Colors// Pick Your Color &amp; Size// Wool Insert included - W7.5 (foot measures 9.5") shoe length 9.75" / Chestnut</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sahara</summary>
+                    <pre>Order 59220
+Sahara RAINEY JANES  Shoes Baby and Toddler - 8   (2yr)6" / Sahara</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sahara</summary>
+                    <pre>Order 59242
+Sahara RAINEY JANES  Shoes Baby and Toddler - 8   (2yr)6" / Sahara</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        10
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)sahara</summary>
+                    <pre>Order 59247
+Sahara RAINEY JANES  Shoes Baby and Toddler - 10    (4yr)7" / Sahara
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        10.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>📝camel Women s Lighter Colors Your Size Wool Insert included W length</summary>
+                    <pre>Order 59268
+Women's RAINEY Janes Lighter Colors// Pick Your Color &amp; Size// Wool Insert included - W10.5 (foot measures 10.5") shoe length 10.75" / Camel
+On Women’s Rainey Jane’s: please make length 11” to accommodate foot length of 10.63”. Please also make WIDE to accommodate foot width of 11 cm.
+
+
+
+On Navy Big Kid Loafers: please put the Bison design on these. I am happy to pay an extra fee if necessary.</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>BELLA</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        1
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)sienna</summary>
+                    <pre>Order 59210
+Sienna &amp; Honey BELLA JANES Shoes Baby and Toddler - 1   (3m)4.25" / Sienna
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        2
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>carob</summary>
+                    <pre>Order 59218
+Carob BELLA JANES Shoes Baby and Toddler - 2   (6m)4.5" / Carob</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        2
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chai</summary>
+                    <pre>Order 59256
+Sepia, Chai BELLA JANES Shoes Baby and Toddler - 2   (6m)4.5" / Chai(right)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        2.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)iron Big Kids Your Size kids measures</summary>
+                    <pre>Order 59244
+Big Kids BELLA Janes // Pick Your Color &amp; Size - kids 2.5 (foot measures 8.25") shoe measures 8.5" / Iron / BELLA JANES
+
+👟(Black)BLACK Big Runner Add to Men's,Women’s &amp; Big Kids//Rubber Sole to Shoes</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)chestnut Big Kids Your Size kids</summary>
+                    <pre>Order 59281
+Big Kids BELLA Janes // Pick Your Color &amp; Size - kids 3 / W4.5 (foot measures 8.5") shoes measures 8.75" / Chestnut / BELLA JANES
+
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)carob</summary>
+                    <pre>Order 59209
+Carob BELLA JANES Shoes Baby and Toddler - 4   (12m)5" / Carob
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑milk</summary>
+                    <pre>Order 59270
+Milk BELLA JANES Shoes Baby and Toddler - 4   (12m)5" / Milk
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 4</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>daffodil</summary>
+                    <pre>Order 59242
+Daffodil BELLA JANES Shoes Baby and Toddler - 8   (2yr)6" / Daffodil</pre>
+                </details>
+                </div></td></tr></tbody></table></div></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Daisy</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)rust W</summary>
+                    <pre>Order 59210
+Rust &amp; W. Wood DAISY SANDALS Shoes Baby and Toddler - 7   (24m)5.75" / Rust
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>rust W</summary>
+                    <pre>Order 59280
+Rust &amp; W. Wood DAISY SANDALS Shoes Baby and Toddler - 9   (3yr)6.5" / Rust</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Mary</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Daisy Mary Janes Shoes with Designs</summary>
+                    <pre>Order 59268
+Daisy Mary Janes Shoes with Designs - 3   (9m)4.75"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)Sunflower</summary>
+                    <pre>Order 59211
+Sunflower Mary Janes Shoes with Designs - 5   (15m)5.25"
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Lotus</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        2
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑barley</summary>
+                    <pre>Order 59215
+Barley LOTUS T-strap Shoes Baby and Toddler - 2   (6m)4.5"
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 2</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        2.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chestnut Big Kids STRAPS or BLOSSOMS Your Size kids measures</summary>
+                    <pre>Order 59226
+Big Kids LOTUS T-STRAPS or BLOSSOMS// Pick Your Color &amp; Size - kids 2.5 (foot measures 8.25") shoe measures 8.5" / chestnut / LOTUS T-STRAPS</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>📝👟(Tan)milk</summary>
+                    <pre>Order 59224
+Milk LOTUS T-strap Shoes Baby and Toddler - 4   (12m)5"
+
+📝 Please make milk t strap in iron leather, sole on this pair.
+
+Size 3 Rainey Jane no sole.
+
+Thank you!
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>oyster pink Dusty Rose</summary>
+                    <pre>Order 59245
+Dusty Rose &amp; Oyster Pink LOTUS T-strap Shoes Baby and Toddler - 4   (12m)5" / Oyster Pink</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Cherry</summary>
+                    <pre>Order 59253
+Cherry LOTUS T-Strap Shoes Baby and Toddler - 4   (12m)5"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Cherry</summary>
+                    <pre>Order 59253
+Cherry LOTUS T-Strap Shoes Baby and Toddler - 5   (15m)5.25"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑dusty rose Dusty Rose</summary>
+                    <pre>Order 59270
+Dusty Rose &amp; Oyster Pink LOTUS T-strap Shoes Baby and Toddler - 5   (15m)5.25" / Dusty Rose
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 4</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)chestnut Women s Straps Darker Colors Your Size Wool Insert included W length</summary>
+                    <pre>Order 59232
+Women's LOTUS T-Straps Darker Colors// Pick Your Color &amp; Size// Wool Insert included - W5.5 (foot measures 8.75") shoe length 9" / Chestnut
+
+👟(Tan)TAN Big Runner Add to Men's, Women’s &amp; Big Kids//Rubber Sole to Shoes</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)🐑📝🐑rust W</summary>
+                    <pre>Order 59259
+Rust &amp; W. Wood LOTUS T-strap Shoes Baby and Toddler - 6    (18m)5.5" / Rust
+
+📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 12-13
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chestnut Women s Straps Darker Colors Your Size Wool Insert included W length</summary>
+                    <pre>Order 59226
+Women's LOTUS T-Straps Darker Colors// Pick Your Color &amp; Size// Wool Insert included - W9 (foot measures 10") shoe length 10.25" / Chestnut</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        11
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)🐑📝🐑rust</summary>
+                    <pre>Order 59259
+Rust LOTUS T-Strap Shoes Baby and Toddler - 11 (5yr) 7.5"
+
+📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 12-13
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Moccs</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑caramel</summary>
+                    <pre>Order 59219
+Chai, Caramel, Sepia Leather Moccs Shoes Baby and Toddler - 9   (3yr)6.5" / Caramel(middle)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 9</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        10
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)sable (dark brown)</summary>
+                    <pre>Order 59284
+Saddle, Latte, Sable MOCCS Shoes Baby and Toddler - 10    (4yr)7" / Sable (dark brown)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr></tbody></table></div></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>None</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        2.5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>Big Kids ADD Wool Insert wool insole Any size kids</summary>
+                    <pre>Order 59226
+Big Kids ADD// Wool Insert//Removable wool insole for Any size - kids 2.5</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)Big Kids ADD Wool Insert wool insole Any size kids</summary>
+                    <pre>Order 59281
+Big Kids ADD// Wool Insert//Removable wool insole for Any size - kids 3
+
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>carob Women s BLOSSOMS Darker Colors Your Size Wool Insert included W length</summary>
+                    <pre>Order 59249
+Women's BLOSSOMS Darker Colors // Pick Your Color &amp; Size// Wool Insert included - W7 (foot measures 9.25") shoe length 9.5" / Carob</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chestnut Women s BLOSSOMS Darker Colors Your Size Wool Insert included W length</summary>
+                    <pre>Order 59249
+Women's BLOSSOMS Darker Colors // Pick Your Color &amp; Size// Wool Insert included - W7 (foot measures 9.25") shoe length 9.5" / Chestnut</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        None
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>📝NEW ADULT ADD Wool Insert wool insole Any size Womens</summary>
+                    <pre>Order 59226
+NEW ADULT 1/4" ADD// Wool Insert//Removable wool insole for Any size - Womens 9
+1) My foot width measures at Length: 9 7/8ths &amp; Width: 4.25in.  Would a best fit be a Women's WIDE? If so, please cut them to be a wide.
+
+2) My daughter's foot measurements are Length: 8in &amp; Width: 3in.  She's got more narrow feet.  please cut her shoes to for a best fit as well.</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Designs</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        1
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>lichen Mountains</summary>
+                    <pre>Order 59274
+Lichen Mountains Leather Shoes  with Designs - 1   (3m)4.25" / Lichen</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        3
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>saddle Bison</summary>
+                    <pre>Order 59237
+Bison on Saddle Leather Shoes with Designs - 3   (9m)4.75"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👜(Cherry On Pink Leather Purse Toddler &amp; Kids)pink Cherries</summary>
+                    <pre>Order 59227
+Cherries on pink Leather Shoes with Designs - 4   (12m)5"
+
+👜(Cherry On Pink Leather Purse Toddler &amp; Kids)Cherry on Pink Leather PURSE Toddler &amp; Kids</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>sepia Mushrooms</summary>
+                    <pre>Order 59257
+Mushrooms on Sepia Leather Shoes with Designs - 5   (15m)5.25"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>saddle Bison</summary>
+                    <pre>Order 59272
+Bison on Saddle Leather Shoes with Designs - 5   (15m)5.25"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chai Mushrooms</summary>
+                    <pre>Order 59229
+Mushrooms on Chai Leather Shoes with Designs - 6    (18m)5.5"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)📝👟(Tan)navy Whale</summary>
+                    <pre>Order 59282
+Whale on Navy Leather Shoes with Designs - 8   (2yr)6"
+
+📝 The black soles are for the Whale shoes, the tan soles are for the Dog Shoes.
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)big sky Rainbow Big Sky</summary>
+                    <pre>Order 59278
+Rainbow on Big Sky Leather Shoes with Designs - 9   (3yr)6.5"
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>Two tone</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        4
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑chai/sahara Spring</summary>
+                    <pre>Order 59230
+Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 4   (12m)5" / Chai/Sahara(Left)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 4</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        5
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑🐑wood/latte Spring</summary>
+                    <pre>Order 59230
+Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 5   (15m)5.25" / wood/latte(Right)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 4</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)🐑wood/latte Spring</summary>
+                    <pre>Order 59250
+Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 6    (18m)5.5" / wood/latte(Right)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chestnut, tumbleweed</summary>
+                    <pre>Order 59255
+Chestnut/Tumbleweed Two Tone Loafer Baby and Toddler Shoes - 6    (18m)5.5"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chestnut, tumbleweed</summary>
+                    <pre>Order 59283
+Chestnut/Tumbleweed Two Tone Loafer Baby and Toddler Shoes - 6    (18m)5.5"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        7
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑latte, wood</summary>
+                    <pre>Order 59267
+Wood/Latte Two Tone Loafers Shoes Baby and Toddler - 7   (24m)5.75"
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 7</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        9
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>chestnut, tumbleweed</summary>
+                    <pre>Order 59238
+Chestnut/Tumbleweed Two Tone Loafer Baby and Toddler Shoes - 9   (3yr)6.5"</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        12
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>wood/latte Spring</summary>
+                    <pre>Order 59260
+Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 12-13(6yr)8" / wood/latte(Right)</pre>
+                </details>
+                </div></td></tr><tr><td>
+                     <button class="order " "="">
+                        12
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Tan)chai/sahara Spring</summary>
+                    <pre>Order 59266
+Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 12-13(6yr)8" / Chai/Sahara(Left)
+
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</pre>
+                </details>
+                </div></td></tr></tbody></table></div><div><h1>SEQ</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        8
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>👟(Black)🐑chai</summary>
+                    <pre>Order 59251
+Chai SEQUOIA Shoes Baby and Toddler - 8   (2yr)6" / Chai
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 8
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</pre>
+                </details>
+                </div></td></tr></tbody></table></div></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Scout</h1><table><tbody><tr><th>Size</th><th>Description</th></tr><tr><td>
+                     <button class="order " "="">
+                        6
+                    </button>
+                </td><td><div class="report-section">
+                <details>
+                    <summary>🐑sable(dark brown)</summary>
+                    <pre>Order 59267
+Latte, Saddle, Sable SCOUT BOOTIES Baby and Toddler - 6    (18m)5.5" / Sable(dark brown)
+
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 7</pre>
+                </details>
+                </div></td></tr></tbody></table></div></div><div class="page-break"></div><h2>Leather Order</h2>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Toddler</h1><table><tbody><tr><th>Color</th><th>Qty</th></tr><tr><td>sahara</td><td>6</td></tr><tr><td>iron</td><td>2</td></tr><tr><td>w. wood (lighter)</td><td>2</td></tr><tr><td>honey</td><td>1</td></tr><tr><td>saddle(mid brown)</td><td>1</td></tr><tr><td>carob</td><td>2</td></tr><tr><td>rust</td><td>4</td></tr><tr><td>sienna</td><td>3</td></tr><tr><td>sienna </td><td>4</td></tr><tr><td>caramel</td><td>5</td></tr><tr><td>barley</td><td>1</td></tr><tr><td>oyster</td><td>2</td></tr><tr><td>rust (reddish brown)</td><td>2</td></tr><tr><td>russet</td><td>2</td></tr><tr><td>navy</td><td>5</td></tr><tr><td>lichen</td><td>3</td></tr><tr><td>tumbleweed</td><td>6</td></tr><tr><td>milk off white</td><td>1</td></tr></tbody></table></div><div><h1>Toddler</h1><table><tbody><tr><th>Color</th><th>Qty</th></tr><tr><td>milk left</td><td>1</td></tr><tr><td>milk</td><td>2</td></tr><tr><td>pink</td><td>1</td></tr><tr><td>chai</td><td>5</td></tr><tr><td>wood/latte</td><td>3</td></tr><tr><td>chai/sahara</td><td>2</td></tr><tr><td>sahara </td><td>1</td></tr><tr><td>saddle</td><td>2</td></tr><tr><td>chestnut</td><td>3</td></tr><tr><td>saddle(medium brown)</td><td>1</td></tr><tr><td>sable</td><td>1</td></tr><tr><td>sepia</td><td>3</td></tr><tr><td>daffodil</td><td>1</td></tr><tr><td>papaya</td><td>1</td></tr><tr><td>oyster pink</td><td>1</td></tr><tr><td>chestnut </td><td>2</td></tr><tr><td>dusty rose</td><td>2</td></tr><tr><td>latte</td><td>1</td></tr></tbody></table></div><div><h1>Toddler</h1><table><tbody><tr><th>Color</th><th>Qty</th></tr><tr><td>wood</td><td>1</td></tr><tr><td>sable(dark brown)</td><td>1</td></tr><tr><td>honey </td><td>1</td></tr><tr><td>big sky </td><td>1</td></tr><tr><td>latte (tan)</td><td>1</td></tr><tr><td>big sky</td><td>1</td></tr><tr><td>sable (dark brown)</td><td>1</td></tr></tbody></table></div><div><h1>Kids</h1><table><tbody><tr><th>Color</th><th>Qty</th></tr><tr><td>chestnut</td><td>3</td></tr><tr><td>iron</td><td>1</td></tr><tr><td>navy</td><td>1</td></tr></tbody></table></div><div><h1>Adult</h1><table><tbody><tr><th>Color</th><th>Qty</th></tr><tr><td>chestnut</td><td>4</td></tr><tr><td>carob</td><td>1</td></tr><tr><td>camel</td><td>1</td></tr></tbody></table></div></div><div class="page-break"></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Big Runner Tan</h1><table><tbody><tr><th>Order Number</th><th>Size</th><th>Description</th></tr><tr><td>59232</td><td>3</td><td>📝 Do you guys still do the rewards program? I thought I had a lot of points but don’t see any. Just curious!
+👟(Tan)TAN Big Runner Add to Men's, Women’s &amp; Big Kids//Rubber Sole to Shoes</td></tr><tr><td>59209</td><td>4</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59211</td><td>5</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59212</td><td>6</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59214</td><td>6</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59250</td><td>6</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59210</td><td>7</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59241</td><td>8</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59246</td><td>8</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59248</td><td>8</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59208</td><td>9</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59252</td><td>9</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59278</td><td>9</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59271</td><td>10</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59284</td><td>10</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr></tbody></table></div><div><h1>Big Runner Tan</h1><table><tbody><tr><th>Order Number</th><th>Size</th><th>Description</th></tr><tr><td>59262</td><td>11</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59266</td><td>12</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59224</td><td>999</td><td>📝 Please make milk t strap in iron leather, sole on this pair.
+
+Size 3 Rainey Jane no sole.
+
+Thank you!
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59247</td><td>999</td><td>👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59259</td><td>999</td><td>📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr><tr><td>59282</td><td>999</td><td>📝 The black soles are for the Whale shoes, the tan soles are for the Dog Shoes.
+👟(Tan)ADD//Big Runner//Rubber Sole to Shoes - TAN</td></tr></tbody></table></div></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Natural Wool Insert</h1><table><tbody><tr><th>Order Number</th><th>Size</th><th>Description</th></tr><tr><td>59215</td><td>2</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 2</td></tr><tr><td>59230</td><td>4</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 4</td></tr><tr><td>59270</td><td>4</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 4</td></tr><tr><td>59217</td><td>5</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5</td></tr><tr><td>59230</td><td>5</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 5</td></tr><tr><td>59217</td><td>6</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</td></tr><tr><td>59250</td><td>6</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</td></tr><tr><td>59259</td><td>6</td><td>📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 6</td></tr><tr><td>59267</td><td>7</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 7</td></tr><tr><td>59231</td><td>8</td><td>📝 Could you please make the elastics around the ankles looser? Thanks!
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 8</td></tr><tr><td>59248</td><td>8</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 8</td></tr><tr><td>59251</td><td>8</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 8</td></tr><tr><td>59219</td><td>9</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 9</td></tr><tr><td>59262</td><td>9</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 9</td></tr><tr><td>59262</td><td>11</td><td>🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 11</td></tr></tbody></table></div><div><h1>Natural Wool Insert</h1><table><tbody><tr><th>Order Number</th><th>Size</th><th>Description</th></tr><tr><td>59259</td><td>12-13</td><td>📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!
+🐑ADD//Natural Wool Insert//Removable wool insole for Any size - 12-13</td></tr></tbody></table></div></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Purse</h1><table><tbody><tr><th>Order Number</th><th>Size</th><th>Description</th></tr><tr><td>59227</td><td>None</td><td>👜(Cherry On Pink Leather Purse Toddler &amp; Kids)Cherry on Pink Leather PURSE Toddler &amp; Kids</td></tr><tr><td>59243</td><td>None</td><td>👜(Big Sky Mountains Leather Purse Toddler &amp; Kids)Big Sky Mountains Leather PURSE Toddler &amp; Kids</td></tr><tr><td>59254</td><td>None</td><td>👜(Mouse &amp; Mushroom Leather Purse Toddler &amp; Kids)Mouse &amp; Mushroom Leather PURSE Toddler &amp; Kids</td></tr></tbody></table></div><div><h1>Big Runner Black</h1><table><tbody><tr><th>Order Number</th><th>Size</th><th>Description</th></tr><tr><td>59244</td><td>2.5</td><td>📝 Hi!  Can we please have the Rainey Janes version that has stitching coming from the outer edge of the shoe and includes three half flowers?  I noticed there were two styles in the main photo and my daughter really wants this one, so though I'd make sure :)  Thank you for keeping her feet happy for the seventh year now!
+👟(Black)BLACK Big Runner Add to Men's,Women’s &amp; Big Kids//Rubber Sole to Shoes</td></tr><tr><td>59263</td><td>7</td><td>👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</td></tr><tr><td>59251</td><td>8</td><td>👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</td></tr><tr><td>59273</td><td>8</td><td>👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</td></tr><tr><td>59281</td><td>999</td><td>👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</td></tr><tr><td>59282</td><td>999</td><td>📝 The black soles are for the Whale shoes, the tan soles are for the Dog Shoes.
+👟(Black)ADD//Big Runner//Rubber Sole to Shoes - BLACK</td></tr></tbody></table></div></div>
+            <div style="
+                display:grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap:20px;
+                margin-bottom:20px;
+            ">
+            <div><h1>Headband</h1><table><tbody><tr><th>Order Number</th><th>Size</th><th>Description</th></tr><tr><td>59264</td><td>None</td><td>🎀(Daffodil Daisy Flower Headband)Daffodil Daisy Flower Headband</td></tr></tbody></table></div></div><div class="page-break"></div><div class="report-section"><ul class="order-list"><li><div class="order-header">Order #59205</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara Bear // Cute Critters Leather Shoes Baby and Toddler - 2   (6m)4.5"</span></li></ul></li><li><div class="order-header">Order #59206</div><ul class="order-items"><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 00 (tiny)3.65" / Iron</span><div class="note">📝 this is a gift for a boy, would like the gray or blue if possible.  thank you.</div></li></ul></li><li><div class="order-header">Order #59207</div><ul class="order-items"><li class="order-item"><span class="item-text">Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 8   (2yr)6" / W. Wood (lighter)</span></li></ul></li><li><div class="order-header">Order #59208</div><ul class="order-items"><li class="order-item"><span class="item-text">Honey T-Strap Shoes Baby and Toddler - 9   (3yr)6.5"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59209</div><ul class="order-items"><li class="order-item"><span class="item-text">Sable &amp; Saddle RAINEY JANES Shoes Baby and Toddler - 4   (12m)5" / Saddle(mid brown)</span></li><li class="order-item"><span class="item-text">Carob BELLA JANES Shoes Baby and Toddler - 4   (12m)5" / Carob</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 2</span></li></ul></li></ul></li><li><div class="order-header">Order #59210</div><ul class="order-items"><li class="order-item"><span class="item-text">Rust &amp; W. Wood DAISY SANDALS Shoes Baby and Toddler - 7   (24m)5.75" / Rust</span></li><li class="order-item"><span class="item-text">Sienna &amp; Honey BELLA JANES Shoes Baby and Toddler - 1   (3m)4.25" / Sienna</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 2</span></li></ul></li></ul></li><li><div class="order-header">Order #59211</div><ul class="order-items"><li class="order-item"><span class="item-text">Sunflower Mary Janes Shoes with Designs - 5   (15m)5.25"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59212</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 6    (18m)5.5" / Sienna (top R)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59213</div><ul class="order-items"><li class="order-item"><span class="item-text">Kitties // Cute Critters Leather Shoes Baby and Toddler Cat Kitty - 5   (15m)5.25"</span></li></ul></li><li><div class="order-header">Order #59214</div><ul class="order-items"><li class="order-item"><span class="item-text">Sepia, Caramel, Chai Leather LOAFERS Shoes Baby and Toddler - 6    (18m)5.5" / Caramel</span></li><li class="order-item"><span class="item-text">Sepia, Caramel, Chai Leather LOAFERS Shoes Baby and Toddler - 9   (3yr)6.5" / Caramel</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 2</span></li></ul></li></ul></li><li><div class="order-header">Order #59215</div><ul class="order-items"><li class="order-item"><span class="item-text">Barley LOTUS T-strap Shoes Baby and Toddler - 2   (6m)4.5"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 2 × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59216</div><ul class="order-items"><li class="order-item"><span class="item-text">Oyster RAINEY JANES  Shoes Baby and Toddler - 2   (6m)4.5" / Oyster</span></li></ul></li><li><div class="order-header">Order #59217</div><ul class="order-items"><li class="order-item"><span class="item-text">Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 5   (15m)5.25" / Rust (reddish brown)</span></li><li class="order-item"><span class="item-text">Tumbleweed, Chestnut, Russet Loafers Shoes Baby and Toddler - 6    (18m)5.5" / russet(right)</span></li><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 4   (12m)5" / Navy</span></li><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 4   (12m)5" / Lichen</span></li><li class="order-item"><span class="item-text">Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 5   (15m)5.25" / W. Wood (lighter)</span></li><li class="order-item"><span class="item-text">Tumbleweed, Chestnut, Russet Loafers Shoes Baby and Toddler - 6    (18m)5.5" / tumbleweed(left)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 5 × 2</span></li><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 6 × 2</span></li></ul></li></ul></li><li><div class="order-header">Order #59218</div><ul class="order-items"><li class="order-item"><span class="item-text">Carob BELLA JANES Shoes Baby and Toddler - 2   (6m)4.5" / Carob</span></li><li class="order-item"><span class="item-text">Milk &amp; Barley RAINEY JANES  Shoes Baby and Toddler - 2   (6m)4.5" / Milk off white</span></li></ul></li><li><div class="order-header">Order #59219</div><ul class="order-items"><li class="order-item"><span class="item-text">Chai, Caramel, Sepia Leather Moccs Shoes Baby and Toddler - 9   (3yr)6.5" / Caramel(middle)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 9 × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59220</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara RAINEY JANES  Shoes Baby and Toddler - 8   (2yr)6" / Sahara</span></li></ul></li><li><div class="order-header">Order #59221</div><ul class="order-items"><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes(Big Sky, Navy,Grey, Black) - 5   (15m)5.25" / Navy</span></li></ul></li><li><div class="order-header">Order #59222</div><ul class="order-items"><li class="order-item"><span class="item-text">Women's RAINEY Janes Darker Colors// Pick Your Color &amp; Size// Wool Insert included - W7.5 (foot measures 9.5") shoe length 9.75" / Chestnut</span></li><li class="order-item"><span class="item-text">Men's LOAFERS Darker Colors// Pick Your Color &amp; Size// Wool Insert included - Men 10.5 (foot measures 11”) shoe length 11.25” / Tumbleweed</span></li></ul></li><li><div class="order-header">Order #59223</div><ul class="order-items"><li class="order-item"><span class="item-text">Spring Neutrals Leather Loafers Shoes Baby and Toddler - 3   (9m)4.75" / Milk left</span></li></ul></li><li><div class="order-header">Order #59224</div><ul class="order-items"><li class="order-item"><span class="item-text">Milk LOTUS T-strap Shoes Baby and Toddler - 4   (12m)5"</span></li><li class="order-item"><span class="item-text">Caramel RAINEY JANES Shoes Baby and Toddler - 3   (9m)4.75"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span><div class="note">📝 Please make milk t strap in iron leather, sole on this pair.
+
+Size 3 Rainey Jane no sole.
+
+Thank you!</div></li></ul></li></ul></li><li><div class="order-header">Order #59225</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 4   (12m)5" / Sienna (top R)</span></li></ul></li><li><div class="order-header">Order #59226</div><ul class="order-items"><li class="order-item"><span class="item-text">NEW ADULT 1/4" ADD// Wool Insert//Removable wool insole for Any size - Womens 9</span><div class="note">📝 1) My foot width measures at Length: 9 7/8ths &amp; Width: 4.25in.  Would a best fit be a Women's WIDE? If so, please cut them to be a wide.
+
+2) My daughter's foot measurements are Length: 8in &amp; Width: 3in.  She's got more narrow feet.  please cut her shoes to for a best fit as well.  </div></li><li class="order-item"><span class="item-text">Big Kids ADD// Wool Insert//Removable wool insole for Any size - kids 2.5</span></li><li class="order-item"><span class="item-text">Big Kids LOTUS T-STRAPS or BLOSSOMS// Pick Your Color &amp; Size - kids 2.5 (foot measures 8.25") shoe measures 8.5" / chestnut / LOTUS T-STRAPS</span></li><li class="order-item"><span class="item-text">Women's LOTUS T-Straps Darker Colors// Pick Your Color &amp; Size// Wool Insert included - W9 (foot measures 10") shoe length 10.25" / Chestnut</span></li></ul></li><li><div class="order-header">Order #59227</div><ul class="order-items"><li class="order-item"><span class="item-text">Cherries on pink Leather Shoes with Designs - 4   (12m)5"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>Cherry on Pink Leather PURSE Toddler &amp; Kids × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59228</div><ul class="order-items"><li class="order-item"><span class="item-text">Chai LOAFERS Leather Shoes Baby and Toddler - 4   (12m)5" / Chai</span></li></ul></li><li><div class="order-header">Order #59229</div><ul class="order-items"><li class="order-item"><span class="item-text">Mushrooms on Chai Leather Shoes with Designs - 6    (18m)5.5"</span></li></ul></li><li><div class="order-header">Order #59230</div><ul class="order-items"><li class="order-item"><span class="item-text">Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 5   (15m)5.25" / wood/latte(Right)</span></li><li class="order-item"><span class="item-text">Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 4   (12m)5" / Chai/Sahara(Left)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 5 × 1</span></li><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 4 × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59231</div><ul class="order-items"><li class="order-item"><span class="item-text">Caramel LOAFERS Leather Shoes Baby and Toddler - 8   (2yr)6"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 8 × 1</span><div class="note">📝 Could you please make the elastics around the ankles looser? Thanks! </div></li></ul></li></ul></li><li><div class="order-header">Order #59232</div><ul class="order-items"><li class="order-item"><span class="item-text">Big Kids LOAFERS Shoes// Pick Your Color &amp; Size - kids 3 / W4.5 (foot measures 8.5") shoes measures 8.75" / Chestnut</span><div class="note">📝 Do you guys still do the rewards program? I thought I had a lot of points but don’t see any. Just curious!</div></li><li class="order-item"><span class="item-text">Women's LOTUS T-Straps Darker Colors// Pick Your Color &amp; Size// Wool Insert included - W5.5 (foot measures 8.75") shoe length 9" / Chestnut</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>TAN Big Runner Add to Men's, Women’s &amp; Big Kids//Rubber Sole to Shoes × 2</span><div class="note">📝 Do you guys still do the rewards program? I thought I had a lot of points but don’t see any. Just curious!</div></li></ul></li></ul></li><li><div class="order-header">Order #59233</div><ul class="order-items"><li class="order-item"><span class="item-text">Rust &amp; Wood LOAFERS Leather  Shoes Baby and Toddler - 5   (15m)5.25" / Rust (reddish brown)</span></li></ul></li><li><div class="order-header">Order #59234</div><ul class="order-items"><li class="order-item"><span class="item-text">Russet Bear // Cute Critters Leather Shoes Baby and Toddler - 4   (12m)5"</span><div class="note">📝 Hello! This is a gift so please do not include prices or receipt.
+
+If you could put a note that says "From Jayne and Isaac, to Greyson"
+
+Thanks!</div></li></ul></li><li><div class="order-header">Order #59235</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 9   (3yr)6.5" / Sahara (top L)</span></li></ul></li><li><div class="order-header">Order #59236</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara RAINEY JANES  Shoes Baby and Toddler - 6    (18m)5.5" / Sahara</span></li></ul></li><li><div class="order-header">Order #59237</div><ul class="order-items"><li class="order-item"><span class="item-text">Bison on Saddle Leather Shoes with Designs - 3   (9m)4.75"</span></li></ul></li><li><div class="order-header">Order #59238</div><ul class="order-items"><li class="order-item"><span class="item-text">Chestnut/Tumbleweed Two Tone Loafer Baby and Toddler Shoes - 9   (3yr)6.5"</span></li></ul></li><li><div class="order-header">Order #59239</div><ul class="order-items"><li class="order-item"><span class="item-text">Latte, Saddle, Sable Leather LOAFERS Shoes Baby and Toddler - 7   (24m)5.75" / Saddle(medium brown)</span></li><li class="order-item"><span class="item-text">Sable LOAFERS Leather Shoes Baby and Toddler - 7   (24m)5.75" / sable</span></li></ul></li><li><div class="order-header">Order #59240</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 7   (24m)5.75" / Sienna (top R)</span></li></ul></li><li><div class="order-header">Order #59241</div><ul class="order-items"><li class="order-item"><span class="item-text">Sepia, Caramel, Chai Leather LOAFERS Shoes Baby and Toddler - 8   (2yr)6" / Sepia(left)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59242</div><ul class="order-items"><li class="order-item"><span class="item-text">Daffodil BELLA JANES Shoes Baby and Toddler - 8   (2yr)6" / Daffodil</span></li><li class="order-item"><span class="item-text">Sahara RAINEY JANES  Shoes Baby and Toddler - 8   (2yr)6" / Sahara</span></li><li class="order-item"><span class="item-text">Cherry Red T-Strap Shoes Baby and Toddler - 8   (2yr)6"</span></li></ul></li><li><div class="order-header">Order #59243</div><ul class="order-items"><li class="order-item"><span class="item-text">Papaya Fox// Cute Critters Leather Shoes Baby and Toddler - 10    (4yr)7"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>Big Sky Mountains Leather PURSE Toddler &amp; Kids × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59244</div><ul class="order-items"><li class="order-item"><span class="item-text">Big Kids Rainey Janes // Pick Your Color &amp; Size - kids 2.5 (foot measures 8.25") shoe measures 8.5" / Rhubarb / RAINEY JANES</span><div class="note">📝 Hi!  Can we please have the Rainey Janes version that has stitching coming from the outer edge of the shoe and includes three half flowers?  I noticed there were two styles in the main photo and my daughter really wants this one, so though I'd make sure :)  Thank you for keeping her feet happy for the seventh year now!</div></li><li class="order-item"><span class="item-text">Big Kids BELLA Janes // Pick Your Color &amp; Size - kids 2.5 (foot measures 8.25") shoe measures 8.5" / Iron / BELLA JANES</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>BLACK Big Runner Add to Men's,Women’s &amp; Big Kids//Rubber Sole to Shoes × 2</span><div class="note">📝 Hi!  Can we please have the Rainey Janes version that has stitching coming from the outer edge of the shoe and includes three half flowers?  I noticed there were two styles in the main photo and my daughter really wants this one, so though I'd make sure :)  Thank you for keeping her feet happy for the seventh year now!</div></li></ul></li></ul></li><li><div class="order-header">Order #59245</div><ul class="order-items"><li class="order-item"><span class="item-text">Dusty Rose &amp; Oyster Pink LOTUS T-strap Shoes Baby and Toddler - 4   (12m)5" / Oyster Pink</span></li></ul></li><li><div class="order-header">Order #59246</div><ul class="order-items"><li class="order-item"><span class="item-text">Chai LOAFERS Leather Shoes Baby and Toddler - 8   (2yr)6" / Chai</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59247</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara RAINEY JANES  Shoes Baby and Toddler - 10    (4yr)7" / Sahara</span></li><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes(Big Sky, Navy,Grey, Black) - 3   (9m)4.75" / Navy</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59248</div><ul class="order-items"><li class="order-item"><span class="item-text">Rhubarb T-Strap Shoes Baby and Toddler - 8   (2yr)6" / Rhubarb</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 8 × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59249</div><ul class="order-items"><li class="order-item"><span class="item-text">Women's BLOSSOMS Darker Colors // Pick Your Color &amp; Size// Wool Insert included - W7 (foot measures 9.25") shoe length 9.5" / Carob</span></li><li class="order-item"><span class="item-text">Women's BLOSSOMS Darker Colors // Pick Your Color &amp; Size// Wool Insert included - W7 (foot measures 9.25") shoe length 9.5" / Chestnut</span></li></ul></li><li><div class="order-header">Order #59250</div><ul class="order-items"><li class="order-item"><span class="item-text">Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 6    (18m)5.5" / wood/latte(Right)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 6 × 1</span></li><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59251</div><ul class="order-items"><li class="order-item"><span class="item-text">Chai SEQUOIA Shoes Baby and Toddler - 8   (2yr)6" / Chai</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 8 × 1</span></li><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - BLACK × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59252</div><ul class="order-items"><li class="order-item"><span class="item-text">Tumbleweed, Chestnut, Russet Loafers Shoes Baby and Toddler - 9   (3yr)6.5" / tumbleweed(left)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59253</div><ul class="order-items"><li class="order-item"><span class="item-text">Cherry LOTUS T-Strap Shoes Baby and Toddler - 4   (12m)5"</span></li><li class="order-item"><span class="item-text">Cherry LOTUS T-Strap Shoes Baby and Toddler - 5   (15m)5.25"</span></li></ul></li><li><div class="order-header">Order #59255</div><ul class="order-items"><li class="order-item"><span class="item-text">Chestnut/Tumbleweed Two Tone Loafer Baby and Toddler Shoes - 6    (18m)5.5"</span></li></ul></li><li><div class="order-header">Order #59256</div><ul class="order-items"><li class="order-item"><span class="item-text">Sepia, Chai BELLA JANES Shoes Baby and Toddler - 2   (6m)4.5" / Chai(right)</span></li></ul></li><li><div class="order-header">Order #59257</div><ul class="order-items"><li class="order-item"><span class="item-text">Mushrooms on Sepia Leather Shoes with Designs - 5   (15m)5.25"</span></li></ul></li><li><div class="order-header">Order #59258</div><ul class="order-items"><li class="order-item"><span class="item-text">Rose  Blush T-Strap Shoes Baby and Toddler - 3   (9m)4.75"</span></li></ul></li><li><div class="order-header">Order #59259</div><ul class="order-items"><li class="order-item"><span class="item-text">Rust LOTUS T-Strap Shoes Baby and Toddler - 11 (5yr) 7.5"</span></li><li class="order-item"><span class="item-text">Rust &amp; W. Wood LOTUS T-strap Shoes Baby and Toddler - 6    (18m)5.5" / Rust</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 12-13 × 1</span><div class="note">📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!</div></li><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 6 × 1</span><div class="note">📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!</div></li><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span><div class="note">📝 Hello!  I would like to have the larger size in a 12.  For some reason, I was not seeing that as an available option on your website but I emailed Melanie and she said to put in the comments here.  The rubber sole add-on is for the size 12 shoes only.  Thank you so much!!</div></li></ul></li></ul></li><li><div class="order-header">Order #59260</div><ul class="order-items"><li class="order-item"><span class="item-text">Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 12-13(6yr)8" / wood/latte(Right)</span></li></ul></li><li><div class="order-header">Order #59261</div><ul class="order-items"><li class="order-item"><span class="item-text">Bunnies // Cute Critters Leather Shoes Baby and Toddler Bunny - 4   (12m)5"</span></li></ul></li><li><div class="order-header">Order #59262</div><ul class="order-items"><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 11 (5yr) 7.5" / Sienna</span></li><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 9   (3yr)6.5" / Sienna</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 2</span></li><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 9 × 1</span></li><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 11 × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59263</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 7   (24m)5.75" / Chestnut (bottom L)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - BLACK × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59264</div><ul class="order-items"><li class="order-item"><span class="item-text">Dusty Rose T-Strap Shoes Baby and Toddler - 5   (15m)5.25"</span></li><li class="order-item"><span class="item-text">Sahara LOAFERS Leather Shoes Baby and Toddler - 5   (15m)5.25" / Sahara</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>Daffodil Daisy Flower Headband × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59265</div><ul class="order-items"><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 6    (18m)5.5" / Lichen</span></li></ul></li><li><div class="order-header">Order #59266</div><ul class="order-items"><li class="order-item"><span class="item-text">Spring 2024 Two Tone Loafer Baby and Toddler Shoes - 12-13(6yr)8" / Chai/Sahara(Left)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59267</div><ul class="order-items"><li class="order-item"><span class="item-text">Wood/Latte Two Tone Loafers Shoes Baby and Toddler - 7   (24m)5.75"</span></li><li class="order-item"><span class="item-text">Latte, Saddle, Sable SCOUT BOOTIES Baby and Toddler - 6    (18m)5.5" / Sable(dark brown)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 7 × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59268</div><ul class="order-items"><li class="order-item"><span class="item-text">Women's RAINEY Janes Lighter Colors// Pick Your Color &amp; Size// Wool Insert included - W10.5 (foot measures 10.5") shoe length 10.75" / Camel</span><div class="note">📝 On Women’s Rainey Jane’s: please make length 11” to accommodate foot length of 10.63”. Please also make WIDE to accommodate foot width of 11 cm.
+
+
+
+On Navy Big Kid Loafers: please put the Bison design on these. I am happy to pay an extra fee if necessary. </div></li><li class="order-item"><span class="item-text">Daisy Mary Janes Shoes with Designs - 3   (9m)4.75"</span></li><li class="order-item"><span class="item-text">Big Kids LOAFERS Shoes// Pick Your Color &amp; Size - kids 1.5 ( foot measures 8")shoe measures 8.25" / Navy</span></li><li class="order-item"><span class="item-text">Rose  Blush T-Strap Shoes Baby and Toddler - 10    (4yr)7"</span></li></ul></li><li><div class="order-header">Order #59269</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 11 (5yr)7.5" / Honey (bottom R)</span></li></ul></li><li><div class="order-header">Order #59270</div><ul class="order-items"><li class="order-item"><span class="item-text">Dusty Rose &amp; Oyster Pink LOTUS T-strap Shoes Baby and Toddler - 5   (15m)5.25" / Dusty Rose</span></li><li class="order-item"><span class="item-text">Milk BELLA JANES Shoes Baby and Toddler - 4   (12m)5" / Milk</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Natural Wool Insert//Removable wool insole for Any size - 4 × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59271</div><ul class="order-items"><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 10    (4yr)7" / Sienna (top R)</span></li><li class="order-item"><span class="item-text">Sahara, Sienna, Chestnut, Honey LOAFERS Leather Shoes Baby and Toddler - 9   (3yr)6.5" / Chestnut (bottom L)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 2</span></li></ul></li></ul></li><li><div class="order-header">Order #59272</div><ul class="order-items"><li class="order-item"><span class="item-text">Bison on Saddle Leather Shoes with Designs - 5   (15m)5.25"</span></li></ul></li><li><div class="order-header">Order #59273</div><ul class="order-items"><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 8   (2yr)6" / Navy</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - BLACK × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59274</div><ul class="order-items"><li class="order-item"><span class="item-text">Lichen Mountains Leather Shoes  with Designs - 1   (3m)4.25" / Lichen</span></li></ul></li><li><div class="order-header">Order #59275</div><ul class="order-items"><li class="order-item"><span class="item-text">Lichen, Navy, Big Sky LOAFERS Leather Shoes Baby and Toddler - 12-13(6yr)8" / Big Sky (top L)</span></li></ul></li><li><div class="order-header">Order #59277</div><ul class="order-items"><li class="order-item"><span class="item-text">Latte, Saddle, Sable Leather LOAFERS Shoes Baby and Toddler - 8   (2yr)6" / latte (tan)</span></li></ul></li><li><div class="order-header">Order #59278</div><ul class="order-items"><li class="order-item"><span class="item-text">Rainbow on Big Sky Leather Shoes with Designs - 9   (3yr)6.5"</span></li><li class="order-item"><span class="item-text">Sepia LOAFERS Leather Shoes Baby and Toddler - 8   (2yr)6" / Sepia</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 2</span></li></ul></li></ul></li><li><div class="order-header">Order #59279</div><ul class="order-items"><li class="order-item"><span class="item-text">Oyster RAINEY JANES  Shoes Baby and Toddler - 00 (tiny)3.65" / Oyster</span></li></ul></li><li><div class="order-header">Order #59280</div><ul class="order-items"><li class="order-item"><span class="item-text">Rust &amp; W. Wood DAISY SANDALS Shoes Baby and Toddler - 9   (3yr)6.5" / Rust</span></li></ul></li><li><div class="order-header">Order #59281</div><ul class="order-items"><li class="order-item"><span class="item-text">Big Kids ADD// Wool Insert//Removable wool insole for Any size - kids 3</span></li><li class="order-item"><span class="item-text">Big Kids BELLA Janes // Pick Your Color &amp; Size - kids 3 / W4.5 (foot measures 8.5") shoes measures 8.75" / Chestnut / BELLA JANES</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - BLACK × 1</span></li></ul></li></ul></li><li><div class="order-header">Order #59282</div><ul class="order-items"><li class="order-item"><span class="item-text">Doggies Brown // Cute Critters Leather Shoes Baby and Toddler Dog Dogs - 9   (3yr)6.5"</span></li><li class="order-item"><span class="item-text">Whale on Navy Leather Shoes with Designs - 8   (2yr)6"</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span><div class="note">📝 The black soles are for the Whale shoes, the tan soles are for the Dog Shoes.</div></li><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - BLACK × 1</span><div class="note">📝 The black soles are for the Whale shoes, the tan soles are for the Dog Shoes.</div></li></ul></li></ul></li><li><div class="order-header">Order #59283</div><ul class="order-items"><li class="order-item"><span class="item-text">Loafer Baby and Toddler Shoes( Iron, Sienna, Lichen, Navy) - 7   (24m)5.75" / Iron</span></li><li class="order-item"><span class="item-text">Chestnut/Tumbleweed Two Tone Loafer Baby and Toddler Shoes - 6    (18m)5.5"</span></li></ul></li><li><div class="order-header">Order #59284</div><ul class="order-items"><li class="order-item"><span class="item-text">Saddle, Latte, Sable MOCCS Shoes Baby and Toddler - 10    (4yr)7" / Sable (dark brown)</span></li><li class="addons-section"><div class="addon-header">Add-ons</div><ul class="addons"><li class="addon"><span>ADD//Big Runner//Rubber Sole to Shoes - TAN × 1</span></li></ul></li></ul></li></ul></div></body></html>

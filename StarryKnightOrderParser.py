@@ -2,11 +2,15 @@
 StarryKnightOrderParser.py
 
 Tkinter GUI entry point. Wires up the one-screen workflow: pick a
-workspace directory (first run only), set/clear the last-processed-order
-timestamp, and load a Shopify orders_export.csv -- which parses it
+workspace directory (first run only, or any time via "Reset Workspace
+Directory"), set/clear the last-processed-order timestamp, and load a
+Shopify orders_export.csv -- which parses it
 (utility_modules.orderItem.parse_orders), renders the HTML report
-(utility_modules.makeHtml.export_orders_html), and archives the CSV
-(config.archive_csv_file).
+(utility_modules.makeHtml.export_orders_html), and -- if the "Archive"
+checkbox is checked (the default) -- archives the CSV
+(config.archive_csv_file) and advances the Last Processed Order
+Timestamp. Unchecking it lets a CSV be reprocessed for a one-off test/
+preview run without disturbing either.
 
 Run directly: `python StarryKnightOrderParser.py`
 """
@@ -54,6 +58,12 @@ class OrderParser:
         self.processed_time_stamp = ''
         self.message_notify = ['#00FF00', 'white', 'yellow', 'red', 'blue']
         self.set_button_instance = None
+        # Checked by default -- archives the source CSV into
+        # INPUT_CSV/ARCHIVE and advances the Last Processed Order
+        # Timestamp on load. Unchecking lets a CSV be reprocessed as a
+        # one-off test/preview without touching either. Replaces the old
+        # persisted config/debug_mode.txt setting -- see load_csv().
+        self.archive_var = None
 
     def set_config_directory(self, btn_n):
         """Handler for the first-run "Set Config directory" button: opens a directory picker and initializes the workspace there."""
@@ -96,6 +106,13 @@ class OrderParser:
         parse warnings/errors -> export_orders_html() -> display any
         report warnings -> archive the source CSV -> refresh the
         Last Processed Order Timestamp field.
+
+        Archiving (moving the CSV out of INPUT_CSV/ACTIVE into
+        INPUT_CSV/ARCHIVE), skipping already-processed orders, and the
+        timestamp refresh are all gated on the "Archive" checkbox
+        (checked by default) rather than a persisted config file --
+        uncheck it to reprocess a CSV as a one-off test/preview run
+        without moving the file or advancing the timestamp.
         """
 
         path = self.file.find_file()
@@ -148,12 +165,15 @@ class OrderParser:
         # convert to domain objects
         # ----------------------------------------
 
+        archive = bool(self.archive_var.get()) if self.archive_var else False
+
         batch, events = um.orderItem.parse_orders(
             order_strings=csv_tree["Lineitem name"],
             timestamps=csv_tree["Created at"],
             quantities=csv_tree["Lineitem quantity"],
             notes=csv_tree["Notes"],
-            order_nums=csv_tree["Name"]
+            order_nums=csv_tree["Name"],
+            archive=archive
         )
 
         # ----------------------------------------
@@ -190,10 +210,18 @@ class OrderParser:
                 reuse_lower_label=False
             )
 
-        config.archive_csv_file(path)
-        self.processed_time_stamp = config.get_last_processed_timestamp_string()
-        self.search_text.delete(0, "end")
-        self.search_text.insert(0, self.processed_time_stamp)
+        if archive:
+            config.archive_csv_file(path)
+            self.processed_time_stamp = config.get_last_processed_timestamp_string()
+            self.search_text.delete(0, "end")
+            self.search_text.insert(0, self.processed_time_stamp)
+        else:
+            self.display_label_to_user(
+                "Archive is unchecked -- not archiving the CSV or advancing "
+                "the processed-order timestamp.",
+                urgency=1,
+                reuse_lower_label=False
+            )
 
     def display_label_to_user(self, message, urgency, reuse_lower_label):
         """
@@ -274,6 +302,13 @@ class OrderParser:
                                        'and select open from the file chooser ',
                                        0, False)
 
+        # Always available, not just first-run -- lets the owner
+        # re-point the workspace directory without editing
+        # ~/.starry_knight_workspace by hand if it ever ends up pointing
+        # somewhere stale or wrong (e.g. a deleted temp directory).
+        self.tk.add_frame('Workspace', ['Reset Workspace Directory'],
+                          self.set_config_directory, self.window, True)
+
         self.processed_time_stamp = config.get_last_processed_timestamp_string()
         self.display_label_to_user('Last Processed Order Timestamp' + self.processed_time_stamp,
                                    0, False)
@@ -289,6 +324,17 @@ class OrderParser:
         self.tk.get_button(row, "Set", self.set_date_range, 3, 1).pack(side=self.tk.tk.LEFT, padx=5)
         self.set_button_instance = self.tk.get_invoked()
         self.tk.get_button(row, "Clear", self.set_date_clear, 4, 1).pack(side=self.tk.tk.LEFT, padx=5)
+
+        # Checked by default. Controls both archiving the source CSV
+        # (INPUT_CSV/ACTIVE -> INPUT_CSV/ARCHIVE) and advancing this
+        # timestamp on Load CSV Order -- see load_csv(). Replaces the old
+        # config/debug_mode.txt setting with something visible/toggleable
+        # right here instead of a hidden file.
+        self.archive_var = self.tk.tk.BooleanVar(value=True)
+        self.tk.tk.Checkbutton(
+            row, text="Archive", variable=self.archive_var,
+            bg=self.tk.bg, fg=self.tk.fg
+        ).pack(side=self.tk.tk.LEFT, padx=5)
 
         if self.processed_time_stamp:
             self.search_text.insert(0, self.processed_time_stamp)

@@ -6,6 +6,8 @@ headband, gift card) from a CSV row already identified as an addon by
 orderItem.get_class().
 """
 
+import re
+
 from utility_modules import helper
 from utility_modules.models import Addon
 
@@ -70,6 +72,11 @@ def classify_addon(item):
         item.color = extract_purse_color(item.display_text)
         item.icon = helper.ICON_MAP.get(helper.AddonType.PURSE)
         item.size = "None"
+        # The color (the purse's name, e.g. "Big Sky Mountains") is the
+        # only useful information in the product string -- the rest
+        # ("Leather PURSE Toddler & Kids") is boilerplate that would
+        # otherwise duplicate right after the color in get_display().
+        item.display_text = ""
 
     elif item.add_type == helper.AddonType.GIFT:
         item.add_type = helper.AddonType.GIFT
@@ -92,14 +99,16 @@ def get_color_end_hyphen(item):
 
 
 def extract_big_runner_color(text):
-    """Fallback big-runner color extraction: whatever text precedes the "Big Runner" marker, e.g. "Tan Big Runner" -> "Tan"."""
+    """Fallback big-runner color extraction: whatever text precedes the "Big Runner" marker (case-insensitive, since Shopify product strings vary in casing -- e.g. "BIG RUNNER" -- and a case-sensitive match would silently fail and return the whole string), e.g. "Tan Big Runner" -> "Tan"."""
 
-    marker = "Big Runner"
+    match = re.search("big runner", text, re.IGNORECASE)
 
-    if marker not in text:
+    if not match:
         return "None"
 
-    color = text.split(marker)[0].strip()
+    color = text[:match.start()].strip()
+    # strip a trailing "Leather" -- "<Name> Leather Big Runner" -> "<Name>"
+    color = re.sub(r"\s+leather\s*$", "", color, flags=re.IGNORECASE).strip()
 
     if not color:
         return "None"
@@ -108,14 +117,16 @@ def extract_big_runner_color(text):
 
 
 def extract_purse_color(text):
-    """Purse color extraction: whatever text precedes "purse" (case-insensitive), e.g. "Tan Purse" -> "Tan"."""
+    """Purse color extraction: whatever text precedes "purse" (case-insensitive), e.g. "Tan Purse" -> "Tan". Matches case-insensitively against the original text (not text.split() against a lowercase marker) since Shopify product strings often have "PURSE" in caps, which a case-sensitive split would silently miss and return the whole string instead."""
 
-    marker = "purse"
+    match = re.search("purse", text, re.IGNORECASE)
 
-    if marker not in text.lower():
+    if not match:
         return "None"
 
-    color = text.split(marker)[0].strip()
+    color = text[:match.start()].strip()
+    # strip a trailing "Leather" -- "<Name> Leather PURSE" -> "<Name>"
+    color = re.sub(r"\s+leather\s*$", "", color, flags=re.IGNORECASE).strip()
 
     if not color:
         return "None"

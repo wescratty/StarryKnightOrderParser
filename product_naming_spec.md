@@ -38,9 +38,13 @@ Caramel Rainey Janes - 5 (15m)5.25" / Caramel
   collection name has to appear (see the list below) -- that's how the tool
   decides which section of the cut sheet the pair belongs in.
 - **The size block, right after ` - `**, should stay in the `SIZE (AGE)MEASUREMENT"`
-  shape you're already using, e.g. `5 (15m)5.25"`. The tool also understands a
-  `Kids`, `W`, or `M` prefix in front of the number (`Kids 10`, `W 8`, `M 9`) if
-  you ever need to distinguish a kids/women's/men's size run.
+  shape you're already using, e.g. `5 (15m)5.25"`. For Big Kids and adult
+  women's/men's sizes, put `Kids`, `W`, or `M` right in front of the number
+  (`Kids 10`, `W 8`, `M 9`) -- the spelled-out `Women`/`Men` (`Women 9`, `Men 10.5`)
+  works too and gets normalized the same way. These sizes are automatically
+  grouped at the end of each collection's table on the report instead of mixed
+  in with the toddler sizes, since they're not small and are easy to miss
+  otherwise.
 - **The variant, after ` / `**, is where Shopify puts the option the customer
   actually picked. This is the *first* place the tool looks for a color -- if a
   color name shows up here, that's what gets used. If there's no variant block
@@ -62,6 +66,7 @@ knowing what's on it:
 | T-strap | T-Strap |
 | RAINEY | Rainey Janes |
 | BELLA | Bella Janes |
+| Blossoms | Blossoms |
 | Mary | Mary Janes |
 | SEQ | Sequoia |
 | SUN | Sunrise |
@@ -118,11 +123,21 @@ These aren't shoes, so they're handled separately from the collection list
 above. A line item is recognized as an addon if its name contains one of these
 phrases, matched the same first-wins way:
 
-1. `natural wool insert`
+1. `wool insert` (as long as the words `wool insert` aren't immediately
+   followed by the word `included` -- see below)
 2. `big runner`
 3. `purse`
 4. `headband`
 5. `gift card`
+
+One wool-insert quirk worth knowing: your adult/Big Kids listings often say
+"...Wool Insert included - W7..." right in the shoe's own name, to tell the
+customer a wool insert is bundled in. That phrasing is deliberately excluded
+so those stay filed as shoes -- a standalone wool-insert *add-on* line
+(the kind that shows up on its own row, separate from the shoes) should never
+say "included" right after "wool insert." Both `Natural Wool Insert - Small`
+and `ADD//Natural Wool Insert//Removable wool insole for Any size - 8` style
+names work fine as add-ons.
 
 For wool inserts, whatever follows ` - ` becomes the size (`Natural Wool Insert
 - Small` -> size "Small"). For big runners and headbands, whatever follows

@@ -116,6 +116,82 @@ def test_missing_order_num_column_value_does_not_crash(workspace):
     assert items[0].order_num is None
 
 
+# ----------------------------------------
+# unrecognized-format warnings
+# ----------------------------------------
+#
+# The parser has been repeatedly surprised by new real-world product
+# string shapes (a new collection name, "Men 10.5" spelled out instead of
+# "M 10.5", etc.) -- these tests confirm that the *next* new shape shows
+# up as a visible warning instead of silently vanishing from the report
+# or getting miscounted.
+
+def test_unmatched_category_and_size_are_flagged(workspace):
+    batch, events = oi.parse_orders(
+        order_strings=["Totally New Collection Shoes with no size info at all"],
+        timestamps=["2026-01-01 10:00:00"],
+        order_nums=["#9001"],
+    )
+
+    items = batch.get_all_order_items()
+    assert len(items) == 1
+    # still makes it into the batch -- nothing silently dropped
+    assert items[0].category is None
+    assert items[0].size is None
+
+    messages = [e.message.lower() for e in events]
+    assert any("category" in m for m in messages)
+    assert any("size" in m for m in messages)
+
+
+def test_recognized_category_and_size_produce_no_warnings(workspace):
+    batch, events = oi.parse_orders(
+        order_strings=["Lotus Shoe - 10"],
+        timestamps=["2026-01-01 10:00:00"],
+        order_nums=["#9002"],
+    )
+
+    items = batch.get_all_order_items()
+    assert items[0].category == "Lotus"
+    assert items[0].size == "10"
+    assert events == []
+
+
+def test_addon_color_extraction_failure_is_flagged():
+    """
+    A Big Runner line with neither the usual " - " suffix nor a
+    recognizable "big runner" marker text to extract a color from --
+    e.g. a genuinely new phrasing for this product.
+    """
+
+    batch, events = oi.parse_orders(
+        order_strings=["Big Runner Add-On (color TBD)"],
+        timestamps=["2026-01-01 10:00:00"],
+        order_nums=["#9003"],
+    )
+
+    addons = batch.get_all_addon_items()
+    assert len(addons) == 1
+    assert addons[0].color == "None"
+
+    messages = [e.message.lower() for e in events]
+    assert any("color for this add-on" in m for m in messages)
+
+
+def test_wool_and_gift_addons_are_never_flagged_for_missing_color():
+    # WOOL never extracts a color at all, and GIFT hardcodes "None" on
+    # purpose -- neither is a genuine parsing failure and must not spam
+    # a warning every single time.
+    batch, events = oi.parse_orders(
+        order_strings=["Natural Wool Insert - Small", "Gift Card - $25"],
+        timestamps=["2026-01-01 10:00:00"] * 2,
+        order_nums=["#9004", "#9005"],
+    )
+
+    assert len(batch.get_all_addon_items()) == 2
+    assert events == []
+
+
 def test_happy_path_end_to_end(workspace):
     cols = load_csv_columns(FIXTURES_DIR / "happy_path.csv")
 
@@ -167,3 +243,111 @@ def test_order_item_is_parsed_exactly_once(workspace):
         orderParser.parse_order_item_data = original
 
     assert call_count["n"] == 1
+
+
+# ----------------------------------------
+# get_class: wool insert vs. "wool insert included" (adult/Big Kids fix)
+# ----------------------------------------
+
+def test_bare_wool_insert_addon_is_still_an_addon():
+    # pre-existing pattern, no "ADD//" wrapper -- must keep working
+    from utility_modules.models import Addon
+
+    item = oi.get_class("Natural Wool Insert - Small", "2026-01-01 10:00:00")
+    assert isinstance(item, Addon)
+
+
+def test_add_prefixed_wool_insert_without_natural_is_an_addon():
+    # newer Shopify variant seen in real data: dropped "Natural" from the name
+    from utility_modules.models import Addon
+
+    item = oi.get_class(
+        "Big Kids ADD// Wool Insert//Removable wool insole for Any size - kids 2.5",
+        "2026-01-01 10:00:00",
+    )
+    assert isinstance(item, Addon)
+    assert item.size == "Kids 2.5"
+
+
+def test_new_adult_wool_insert_addon_without_natural_is_an_addon():
+    from utility_modules.models import Addon
+
+    item = oi.get_class(
+        'NEW ADULT 1/4" ADD// Wool Insert//Removable wool insole for Any size - Womens 9',
+        "2026-01-01 10:00:00",
+    )
+    assert isinstance(item, Addon)
+
+
+def test_wool_insert_included_in_shoe_name_stays_a_shoe():
+    """
+    Regression test for the "None" category bug: adult/Big Kids shoe
+    listings describe their bundled wool insert right in the product name
+    ("...Wool Insert included - W7...") -- this must NOT be misclassified
+    as a wool-insert addon, or the shoe silently vanishes from its
+    collection's table and shows up as a phantom "None"-category row
+    instead.
+    """
+    from utility_modules.models import OrderItem
+
+    item = oi.get_class(
+        "Women's RAINEY Janes Darker Colors// Pick Your Color & Size// "
+        'Wool Insert included - W7.5 (foot measures 9.5") shoe length 9.75" / Chestnut',
+        "2026-01-01 10:00:00",
+    )
+    assert isinstance(item, OrderItem)
+    assert item.category == "RAINEY"
+    assert item.prefix == "W"
+    assert item.size == "7.5"
+
+
+def test_blossoms_category_is_recognized(workspace):
+    """
+    Regression test: "Blossoms" adult/Big Kids listings had no matching
+    keyword in helper.CATEGORY at all, so they fell through with
+    category=None and showed up under a garbage "None" section header in
+    the report instead of their own collection.
+    """
+    from utility_modules.models import OrderItem
+
+    item = oi.get_class(
+        "Women's BLOSSOMS Darker Colors // Pick Your Color & Size// "
+        'Wool Insert included - W7 (foot measures 9.25") shoe length 9.5" / Carob',
+        "2026-01-01 10:00:00",
+    )
+    assert isinstance(item, OrderItem)
+    assert item.category == "Blossoms"
+
+
+def test_real_adult_size_csv_has_no_none_category_and_parses_men_and_women(workspace):
+    """
+    End-to-end regression test built from the real orders CSV the owner
+    sent in that first surfaced these adult-size bugs (a Mac executable
+    crash, "Men 10.5" sizing showing as None, and several items dumped
+    under a garbage "None" category). Guards all three fixes together
+    against this exact file.
+    """
+
+    cols = load_csv_columns(FIXTURES_DIR / "test.csv")
+
+    batch, events = oi.parse_orders(
+        order_strings=cols["Lineitem name"],
+        timestamps=cols["Created at"],
+        quantities=cols["Lineitem quantity"],
+        notes=cols["Notes"],
+        order_nums=cols["Name"],
+    )
+
+    assert None not in batch.get_headers()
+
+    mens_loafers = [
+        o for o in batch.get_all_order_items()
+        if "Men's LOAFERS" in o.original_order_string
+    ]
+    assert len(mens_loafers) == 1
+    assert mens_loafers[0].prefix == "M"
+    assert mens_loafers[0].size == "10.5"
+    assert mens_loafers[0].category == "Loafer"
+
+    blossoms = batch.get_order_category("Blossoms")
+    assert len(blossoms) == 2

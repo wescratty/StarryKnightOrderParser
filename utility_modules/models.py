@@ -65,7 +65,11 @@ class Addon:
             ret_str += f"{self.icon}"
         if self.color:
             ret_str += f"({self.color})"
-        if self.display_text:
+        if self.display_text is not None:
+            # empty string is a deliberate "nothing left to show beyond
+            # the color/icon above" result (e.g. PURSE addons) -- not the
+            # same as "never computed" (None), which should still fall
+            # back to product_name/original_order_string below.
             ret_str += f"{self.display_text}"
         elif self.product_name:
             ret_str += f"{self.product_name}"
@@ -139,7 +143,11 @@ class OrderItem:
         ret_str = f""
         if self.note:
             ret_str += f"📝"
-        if self.display_text:
+        if self.display_text is not None:
+            # empty string is a deliberate "nothing distinguishing to
+            # show" result from extract_display_text() -- not the same
+            # as "never computed" (None), which should still fall back
+            # to product_name/original_order_string below.
             ret_str += f"{self.display_text}"
         elif self.product_name:
             ret_str += f"{self.product_name}"

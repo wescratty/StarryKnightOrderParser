@@ -2,9 +2,10 @@
 utility_modules/makeHtml.py
 
 Renders a parsed Batch (see utility_modules.models) into the production
-cut-sheet HTML report: a per-category shoe table, a leather/color-count
-summary, an add-ons table, and a per-order checklist view. Writes the
-result to OUTPUT_HTML/orders.html and opens it in the browser.
+cut-sheet HTML report: a per-category shoe table, a by-size bottoms/sole
+cutting summary, a leather/color-count summary, an add-ons table, and a
+per-order checklist view. Writes the result to OUTPUT_HTML/orders.html
+and opens it in the browser.
 """
 
 import re
@@ -17,9 +18,16 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+class _Divider:
+    """A full-width group-label row (e.g. "Big Kids") inside a Table, rendered as its own <tr> spanning every column instead of one cell per column. See Table.add_divider()."""
+
+    def __init__(self, label):
+        self.label = label
+
+
 @dataclass
 class Table:
-    """One HTML <table>: a title, column headers, and rows (each row a list of cell values)."""
+    """One HTML <table>: a title, column headers, and rows (each row a list of cell values, or a _Divider group label spanning the full row)."""
 
     title: str
     columns: list[str]
@@ -27,6 +35,11 @@ class Table:
 
     def add(self, row):
         self.rows.append(row)
+
+    def add_divider(self, label):
+        """Adds a full-width group-label row, e.g. to mark where Big Kids/Men's/Women's sizes start within an otherwise-toddler-sized table."""
+
+        self.rows.append(_Divider(label))
 
 
 @dataclass
@@ -80,6 +93,12 @@ class Report:
 
         # Rows
         for row in table.rows:
+            if isinstance(row, _Divider):
+                html.append(
+                    f'<tr class="size-group-row"><td class="size-group" colspan="{len(table.columns)}">{row.label}</td></tr>'
+                )
+                continue
+
             html.append("<tr>")
             html.extend(f"<td>{value}</td>" for value in row)
             html.append("</tr>")
@@ -183,6 +202,17 @@ def build_main_table_html(batch):
     description is a collapsible <details> (see make_details_html())
     showing the piggybacked add-on summary and the full tooltip on
     expand/hover.
+
+    When a category's table mixes toddler sizes with Big Kids/Men's/
+    Women's ones, a full-width group-divider row (e.g. "Big Kids") is
+    inserted right before that group starts, so the size jump is obvious
+    at a glance instead of just a size number that looks out of place --
+    per the owner's request. A toddler-only table (the common case) gets
+    no dividers at all, since there's nothing to distinguish. A table
+    that's entirely Big Kids/Men's/Women's (no toddler sizes at all)
+    still gets its one divider up front, though -- without it the sizes
+    alone look just like toddler sizes and get mistaken for them. See
+    _should_show_divider().
     """
 
     report = Report("Shoes", max_rows=13)
@@ -193,7 +223,17 @@ def build_main_table_html(batch):
         if len(cat_orders):
             table = Table(header, ["Size", "Description"])
 
-            for order in sorted(cat_orders, key=sort_size):
+            sorted_orders = sorted(cat_orders, key=sort_size)
+            tiers_present = {get_size_tier(o)[0] for o in sorted_orders}
+            last_tier = None
+
+            for order in sorted_orders:
+                tier, label, _number = get_size_tier(order)
+
+                if _should_show_divider(tier, last_tier, tiers_present):
+                    table.add_divider(label or "Other")
+                    last_tier = tier
+
                 html = f"<div class='report-section'>"
 
                 size = order.size
@@ -201,9 +241,20 @@ def build_main_table_html(batch):
 
                 add_ons = batch.get_order_addon_items(order_num=order.order_num)
 
+                # Only WOOL/SOLE addons piggyback onto a shoe row -- those
+                # literally attach to a specific pair, so showing them
+                # inline on that pair's row makes sense. PURSE/HEADBAND/
+                # GIFT are standalone accessory items with their own
+                # report table; they just happen to share an order number
+                # with an unrelated shoe purchase, so piggybacking them
+                # here would incorrectly stamp e.g. a purse's info onto a
+                # completely different shoe in the same order.
+                piggyback_types = (helper.AddonType.WOOL, helper.AddonType.SOLE)
+
                 if len(add_ons):
                     for add in add_ons:
-                        display = f"{add.get_order_piggyback_display()}{display}"
+                        if add.add_type in piggyback_types:
+                            display = f"{add.get_order_piggyback_display()}{display}"
 
                 tooltip = order.get_tool_tip(add_ons)
 
@@ -233,48 +284,109 @@ def make_details_html(main_display, tooltip):
     return size_html
 
 
-def sort_size(add):
+_SIZE_TIERS = {
+    None: (0, "Toddler"),   # numeric toddler/baby sizes: 1, 2, 3...
+    "Kids": (1, "Big Kids"),
+    "M": (2, "Men's"),
+    "W": (3, "Women's"),
+}
+
+# Tiers that always get their own divider row, even when a table happens
+# to contain only that one tier -- otherwise a Big Kids/Men's/Women's-only
+# table shows no header at all, and since the size number alone looks
+# just like a toddler size, the owner has mistaken an all-adult table for
+# a toddler one. Toddler (0) and "no size at all" (99) are deliberately
+# left out -- a toddler-only table is the common case and needs no
+# header, and a lone unparseable size isn't a tier worth always labeling.
+_ALWAYS_LABEL_TIERS = {1, 2, 3}
+
+
+def _should_show_divider(tier, last_tier, tiers_present):
     """
-    Sort key for shoe/addon sizes: numeric toddler sizes and explicit
-    "kids" sizes sort first (by number), then men's ("M"), then women's
-    ("W"). Anything with no size, or a size that doesn't match the
-    expected pattern, sorts last.
+    Shared divider-insertion rule for build_main_table_html() and
+    get_add_on_report(): show a divider when the tier just changed, and
+    either the table mixes more than one tier, or this tier is always
+    labeled regardless (see _ALWAYS_LABEL_TIERS).
     """
 
-    if not add.size:
-        return 99, 999
+    if tier == last_tier:
+        return False
 
-    size = str(add.size).strip()
+    return len(tiers_present) > 1 or tier in _ALWAYS_LABEL_TIERS
+
+
+def get_size_tier(item):
+    """
+    Classifies an OrderItem/Addon's size into (tier, label, number):
+    tier/label are one of _SIZE_TIERS' (index, name) pairs -- (99, None)
+    if there's no size or it doesn't match the expected pattern -- and
+    number is the parsed numeric size (None if there wasn't one to parse).
+
+    OrderItem.prefix is already normalized to exactly None/"Kids"/"W"/"M"
+    by orderParser.get_size_and_prefix(), so it's used directly here when
+    present. Addon objects don't populate .prefix -- their WOOL size text
+    (e.g. "Kids 2.5", "Womens 9") still carries the prefix word embedded
+    in the size string itself, so those fall back to parsing it out the
+    same way get_size_and_prefix() does.
+
+    Used both for sort_size() (the tier index) and for the "Big Kids"/
+    "Men's"/"Women's" group-divider rows build_main_table_html() and
+    get_add_on_report() insert into each table, so a size only ever needs
+    classifying in one place.
+    """
+
+    if not item.size:
+        return 99, None, None
+
+    size = str(item.size).strip()
+    explicit_prefix = getattr(item, "prefix", None)
+
+    if explicit_prefix:
+        number_match = re.match(r'(\d+(?:\.\d+)?)$', size)
+        number = float(number_match.group(1)) if number_match else None
+        tier, label = _SIZE_TIERS.get(explicit_prefix, (99, None))
+        return tier, label, number
 
     match = re.match(
-        r'(?:(kids)|([WM]))?\s*(\d+(?:\.\d+)?)$',
+        r'(?:(kids)|(wom[ae]ns?|m[ae]ns?|[WM]))?\s*(\d+(?:\.\d+)?)$',
         size,
         re.IGNORECASE
     )
 
     if not match:
-        return 99, 999
+        return 99, None, None
 
-    kids_prefix, wm_prefix, number = match.groups()
+    kids_prefix, adult_prefix, number = match.groups()
 
     if kids_prefix:
-        prefix = "K"
-    elif wm_prefix:
-        prefix = wm_prefix.upper()
+        prefix = "Kids"
+    elif adult_prefix:
+        prefix = "W" if adult_prefix[0].lower() == "w" else "M"
     else:
-        prefix = ""
+        prefix = None
 
-    prefix_order = {
-        "": 0,   # numeric toddler sizes: 1, 2, 3...
-        "K": 0,  # explicit "kids 2.5"
-        "M": 1,
-        "W": 2,
-    }
+    tier, label = _SIZE_TIERS.get(prefix, (99, None))
+    return tier, label, float(number)
 
-    return (
-        prefix_order.get(prefix, 99),
-        float(number)
-    )
+
+def sort_size(item):
+    """
+    Sort key for shoe/addon sizes. Regular numeric baby/toddler sizes sort
+    first (tier 0, by number); Big Kids, then men's, then women's sizes
+    all sort into their own tiers *after* every toddler size, rather than
+    being interleaved with them by raw number -- per the owner's request,
+    since adult/Big Kids sizes aren't small and are hard to spot when
+    scattered through the toddler range. Anything with no size, or a size
+    that doesn't match the expected pattern, sorts last of all. See
+    get_size_tier() for the actual tier/number classification.
+    """
+
+    tier, _label, number = get_size_tier(item)
+
+    if number is None:
+        return 99, 999
+
+    return tier, number
 
 
 def export_orders_html(batch: Batch, filename="orders.html"):
@@ -308,6 +420,10 @@ def export_orders_html(batch: Batch, filename="orders.html"):
     html = get_preamble(date_range_text)
 
     html += build_main_table_html(batch).make(4)
+
+    html += '''<h2>Bottoms</h2>'''
+    bottoms_report = get_bottoms_report(orders)
+    html += bottoms_report.make(max_tables=5)
 
     html += '''<h2>Leather Order</h2>'''
     size_report = get_leather_order(orders)
@@ -361,7 +477,7 @@ def get_date_range(orders):
 
 
 def get_add_on_report(batch):
-    """Builds the add-ons Report (one Table per category/color grouping) and returns (report, events) -- events flags any order whose big runner size couldn't be inferred."""
+    """Builds the add-ons Report (one Table per category/color grouping) and returns (report, events) -- events flags any order whose big runner size couldn't be inferred. Group-divider rows are inserted the same way as build_main_table_html() -- see _should_show_divider()."""
 
     add_ons_dict, events = batch.get_addon_categorized()
     add_report = Report(max_rows=15)
@@ -369,19 +485,90 @@ def get_add_on_report(batch):
         add_list = add_ons_dict[add_key]
         title = add_key
         columns = ["Order Number", "Size", "Description"]
-        rows = []
-        for add in sorted(add_list, key=sort_size):
+
+        sorted_adds = sorted(add_list, key=sort_size)
+        tiers_present = {get_size_tier(a)[0] for a in sorted_adds}
+        last_tier = None
+
+        table = Table(title=title, columns=columns)
+        for add in sorted_adds:
+            tier, label, _number = get_size_tier(add)
+
+            if _should_show_divider(tier, last_tier, tiers_present):
+                table.add_divider(label or "Other")
+                last_tier = tier
+
             size = 999
             if add.size:
                 size = add.size
-            rows.append([add.order_num, size, add.get_display()])
+            table.add([add.order_num, size, add.get_display()])
 
-        add_report.add(Table(
-            title=title,
-            columns=columns,
-            rows=rows
-        ))
+        add_report.add(table)
     return add_report, events
+
+
+def _bottom_size_label(order):
+    """
+    Label for one row of the "Bottoms" table (see get_bottoms_report()):
+    the bare size for a plain toddler size ("3", matching what's shown on
+    that order's own size button), or "<tier> <size>" for a Big Kids/
+    Men's/Women's size ("Big Kids 2.5", "Men's 10.5", "Women's 9") so
+    those don't collide with a same-numbered toddler size in the same
+    table. "Unknown" for an item with no usable size at all.
+    """
+
+    if not order.size:
+        return "Unknown"
+
+    tier, tier_label, _number = get_size_tier(order)
+
+    if tier_label and tier != 0:
+        return f"{tier_label} {order.size}"
+
+    return str(order.size)
+
+
+def get_bottoms_report(orders):
+    """
+    Builds the "Bottoms" table: total pairs needed per size across every
+    category and color combined. The bottom/sole leather is cut the same
+    color regardless of the shoe's own color, so this lets the owner cut
+    the whole order's bottoms in one batch by size instead of hunting
+    across every category's table. Sorted the same way as sort_size()
+    (toddler sizes ascending, then Big Kids, then Men's, then Women's),
+    with a bolded Total row at the end.
+    """
+
+    counts = defaultdict(int)
+    sample_order_for_label = {}
+
+    for order in orders:
+        label = _bottom_size_label(order)
+        counts[label] += order.quantity or 0
+
+        # keep one representative item per label so sort_size() has
+        # something real to sort by
+        if label not in sample_order_for_label:
+            sample_order_for_label[label] = order
+
+    table = Table("Bottoms", ["Size", "Qty"])
+
+    sorted_labels = sorted(
+        counts.keys(),
+        key=lambda label: sort_size(sample_order_for_label[label])
+    )
+
+    total = 0
+    for label in sorted_labels:
+        qty = counts[label]
+        total += qty
+        table.add([label, qty])
+
+    table.add(["<b>Total</b>", f"<b>{total}</b>"])
+
+    bottoms_report = Report()
+    bottoms_report.add(table)
+    return bottoms_report
 
 
 def get_leather_order(orders):
@@ -487,6 +674,21 @@ def get_preamble(date_range_text):
 
             td {{
                 min-width: 30px;
+            }}
+
+            /* Big Kids/Men's/Women's group-divider row -- see
+               makeHtml.Table.add_divider() / _Divider */
+            td.size-group {{
+                background-color: #333333;
+                color: #ffffff;
+                font-weight: bold;
+                text-align: center;
+                padding: 4px 6px;
+            }}
+
+            tr.size-group-row {{
+                break-inside: avoid;
+                page-break-inside: avoid;
             }}
 
             /* =========================
