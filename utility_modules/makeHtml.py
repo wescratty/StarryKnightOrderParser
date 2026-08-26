@@ -25,6 +25,32 @@ class _Divider:
         self.label = label
 
 
+def _split_by_divider(rows):
+    """
+    Splits a Table's rows list into (subtitle, data_rows) segments on its
+    _Divider markers -- subtitle is the preceding divider's label (or None
+    for the rows before the first divider, e.g. a toddler-only table with
+    no divider at all). Used by Report.make_flat() to turn each segment
+    into its own standalone <table>, so its title/subtitle can live in a
+    <thead> that repeats on a print page break -- see make_flat().
+    """
+
+    subtitle = None
+    current = []
+
+    for row in rows:
+        if isinstance(row, _Divider):
+            if current:
+                yield subtitle, current
+            subtitle = row.label
+            current = []
+        else:
+            current.append(row)
+
+    if current:
+        yield subtitle, current
+
+
 @dataclass
 class Table:
     """One HTML <table>: a title, column headers, and rows (each row a list of cell values, or a _Divider group label spanning the full row)."""
@@ -141,70 +167,84 @@ class Report:
 
         return "".join(html)
 
+    def make_flat(self) -> str:
+        """
+        Renders every table as one flowing, single-column list of plain
+        HTML tables -- no side-by-side columns -- used for the main Shoes
+        report instead of get_grid_of_tables(). Each (category, size-tier)
+        group becomes its own standalone <table> via _split_by_divider(),
+        with the category name (and size-tier label, when the category
+        has more than one) inside a <thead> instead of a plain heading --
+        <thead> is what makes a browser automatically reprint that title
+        at the top of the next page if the table's rows spill across a
+        print page break, so "Loafer -- Big Kids" reappears if the page
+        breaks partway through that group instead of leaving the reader
+        to guess what they're looking at.
+
+        This intentionally doesn't chop()/grid-layout tables the way
+        make() does: a flowing single column paginates on its own in
+        print, so there's no leftover-column whitespace to solve for.
+        """
+
+        if not any(table.rows for table in self.tables):
+            return ""
+
+        html = []
+
+        for table in self.tables:
+            if not table.rows:
+                continue
+
+            for subtitle, rows in _split_by_divider(table.rows):
+                html.append("<table>")
+                html.append("<thead>")
+                html.append(
+                    f'<tr class="table-title-row"><th colspan="{len(table.columns)}">{table.title}</th></tr>'
+                )
+                if subtitle:
+                    html.append(
+                        f'<tr class="table-subtitle-row"><th colspan="{len(table.columns)}">{subtitle}</th></tr>'
+                    )
+                html.append("<tr>")
+                html.extend(f"<th>{column}</th>" for column in table.columns)
+                html.append("</tr>")
+                html.append("</thead>")
+
+                html.append("<tbody>")
+                for row in rows:
+                    html.append("<tr>")
+                    html.extend(f"<td>{value}</td>" for value in row)
+                    html.append("</tr>")
+                html.append("</tbody>")
+
+                html.append("</table>")
+
+        html.append('<div class="page-break"></div>')
+
+        return "".join(html)
+
 
 # ----------------------------
 # Generic Table builder
 # ----------------------------
 
-def build_order_list_html(batch: Batch) -> str:
-    """Renders the per-order checklist view: one <li> per order, its shoes, and its add-ons."""
-
-    html = "<div class='report-section'>"
-    html += "<ul class='order-list'>"
-
-    order_dict = batch.get_orders()
-
-    for order_num, items in order_dict.items():
-        html += f"<li>"
-        html += f"<div class='order-header'>Order #{order_num}</div>"
-
-        html += "<ul class='order-items'>"
-
-        # Shoes / items
-        for item in items:
-            html += "<li class='order-item'>"
-            html += f"<span class='item-text'>{item.original_order_string}</span>"
-
-            if item.note:
-                html += f"<div class='note'>📝 {item.note}</div>"
-
-            html += "</li>"
-
-        # Add-ons
-        addons = batch.get_order_addon_items(order_num)
-        if addons:
-            html += "<li class='addons-section'>"
-            html += "<div class='addon-header'>Add-ons</div>"
-            html += "<ul class='addons'>"
-
-            for addon in addons:
-                html += "<li class='addon'>"
-                html += f"<span>{addon.display_text} × {addon.quantity}</span>"
-
-                if addon.note:
-                    html += f"<div class='note'>📝 {addon.note}</div>"
-
-                html += "</li>"
-
-            html += "</ul>"
-            html += "</li>"
-
-        html += "</ul>"
-        html += "</li>"
-
-    html += "</ul>"
-    html += "</div>"
-
-    return html
-
-
 def build_main_table_html(batch):
     """
     Builds the main "Shoes" report: one Table per category (see
-    helper.CATEGORY), one row per order item, sorted by size. Each row's
-    description is a collapsible <details> (see make_details_html())
-    showing the piggybacked add-on summary and the full tooltip on
-    expand/hover.
+    helper.CATEGORY), one row per order item, sorted by size, rendered
+    flat via Report.make_flat() -- Size | Description | Order Details,
+    with the order number, full raw Shopify product string, and any note
+    always visible in their own column instead of tucked behind a
+    collapsible <details>/hover. That collapsible version worked fine on
+    screen, but printed to paper it silently vanished: Chrome prints a
+    <details> in its default closed state, so every gift note and full
+    order string was invisible on the printed cut sheet without anyone
+    realizing it. Order Details reuses OrderItem.get_tool_tip(), the same
+    "Order {{num}}\\n{{product string}}\\n{{note}}\\n{{addon lines}}" text
+    the old hover tooltip already showed -- nothing new to compute, just
+    no longer hidden. This also makes the separate per-order checklist
+    view (the old build_order_list_html()) redundant, since every order's
+    full text is now sitting right here -- see export_orders_html().
 
     When a category's table mixes toddler sizes with Big Kids/Men's/
     Women's ones, a full-width group-divider row (e.g. "Big Kids") is
@@ -215,7 +255,10 @@ def build_main_table_html(batch):
     that's entirely Big Kids/Men's/Women's (no toddler sizes at all)
     still gets its one divider up front, though -- without it the sizes
     alone look just like toddler sizes and get mistaken for them. See
-    _should_show_divider().
+    _should_show_divider(). Report.make_flat() turns each divider
+    boundary into its own <table> with the category name and tier label
+    in a <thead>, so "Loafer -- Big Kids" reprints automatically if a
+    print page breaks partway through that group.
     """
 
     report = Report("Shoes", max_rows=13)
@@ -224,7 +267,7 @@ def build_main_table_html(batch):
         cat_orders = batch.get_order_category(header)
 
         if len(cat_orders):
-            table = Table(header, ["Size", "Description"])
+            table = Table(header, ["Size", "Description", "Order Details"])
 
             sorted_orders = sorted(cat_orders, key=sort_size)
             tiers_present = {get_size_tier(o)[0] for o in sorted_orders}
@@ -236,8 +279,6 @@ def build_main_table_html(batch):
                 if _should_show_divider(tier, last_tier, tiers_present):
                     table.add_divider(label or "Other")
                     last_tier = tier
-
-                html = f"<div class='report-section'>"
 
                 size = order.size
                 display = order.get_display()
@@ -266,25 +307,13 @@ def build_main_table_html(batch):
                         {size}
                     </button>
                 """
-                html += make_details_html(display, tooltip)
-                html += "</div>"
+                display_html = f'<span class="display-text">{display}</span>'
+                details_html = f'<pre class="order-details">{tooltip}</pre>'
 
-                table.add([size_html, html])
+                table.add([size_html, display_html, details_html])
 
             report.add(table=table)
     return report
-
-
-def make_details_html(main_display, tooltip):
-    """Wraps a row's display text and tooltip in a collapsible <details>/<summary> element."""
-
-    size_html = f'''
-                <details>
-                    <summary>{main_display}</summary>
-                    <pre>{tooltip}</pre>
-                </details>
-                '''
-    return size_html
 
 
 _SIZE_TIERS = {
@@ -422,7 +451,7 @@ def export_orders_html(batch: Batch, filename="orders.html"):
 
     html = get_preamble(date_range_text)
 
-    html += build_main_table_html(batch).make(4)
+    html += build_main_table_html(batch).make_flat()
 
     html += '''<h2>Bottoms</h2>'''
     bottoms_report = get_bottoms_report(orders)
@@ -435,8 +464,6 @@ def export_orders_html(batch: Batch, filename="orders.html"):
     add_report, addon_events = get_add_on_report(batch)
     user_notify_list.extend(addon_events)
     html += add_report.make(max_tables=2)
-
-    html += build_order_list_html(batch)
 
     html += """</body></html>"""
 
@@ -695,6 +722,43 @@ def get_preamble(date_range_text):
             }}
 
             /* =========================
+               FLAT SHOES TABLE
+               (see Report.make_flat() / build_main_table_html())
+            ========================== */
+
+            /* category name -- <thead> so it reprints on a print page
+               break partway through this table, unlike a plain <h1> */
+            tr.table-title-row th {{
+                background-color: #ffffff;
+                border: none;
+                text-align: left;
+                font-size: 20px;
+                font-weight: bold;
+                padding: 10px 0 4px 0;
+            }}
+
+            /* Big Kids/Men's/Women's tier label for this table, also in
+               the <thead> so it reprints alongside the category name */
+            tr.table-subtitle-row th {{
+                background-color: #333333;
+                color: #ffffff;
+                text-align: center;
+                font-weight: bold;
+                padding: 4px 6px;
+            }}
+
+            /* order number/raw product string/note -- always visible now
+               instead of behind a <details> click/hover, which printed
+               to paper as permanently closed and invisible */
+            pre.order-details {{
+                white-space: pre-wrap;
+                word-break: break-word;
+                font-family: Arial, sans-serif;
+                font-size: 11px;
+                margin: 0;
+            }}
+
+            /* =========================
                TABLE COLUMN LAYOUT
                (see Report.get_grid_of_tables())
             ========================== */
@@ -729,35 +793,11 @@ def get_preamble(date_range_text):
                 background-color: #f0f0f0;
             }}
 
-            li.has-note {{
-                font-weight: bold;
-                color: #0056b3;
-                font-size: 14px;
-            }}
-            div.has-note {{
-                font-weight: bold;
-                color: #0056b3;
-                font-size: 14px;
-            }}
-
             /* =========================
-               REPORT BLOCKS
+               CUT-PROGRESS MARKER BUTTON
+               (the clickable size button on each Shoes row -- see the
+               click-to-cycle-color <script> in get_preamble())
             ========================== */
-
-            .report-section {{
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }}
-
-            /* =========================
-               ORDER LIST VIEW
-            ========================== */
-
-            .order-list {{
-                list-style: none;
-                padding-left: 0;
-                font-size: 11px;
-            }}
 
             .order {{
                 border: 1px solid #ddd;
@@ -773,76 +813,20 @@ def get_preamble(date_range_text):
                 align-items: center;
                 justify-content: center;
             }}
-            
-            .order.active {{
-                background: #ffff99;
-            }}
-            
-            .order.active::after {{
-                content: attr(data-tooltip);
-                white-space: pre-wrap;
-            
-                position: absolute;
-                top: 100%;
-                left: 0;
-            
-                z-index: 1000;
-            
-                background: white;
-                border: 1px solid black;
-                padding: 8px;
-                min-width: 250px;
-            }}
 
-            .order-header {{
-                font-weight: bold;
-                font-size: 14px;
-                margin-bottom: 6px;
-            }}
-
-            .order-items {{
-                list-style: none;
-                padding-left: 10px;
-            }}
             .order.red {{
                 background-color: #ff9999;
             }}
             .order.yellow {{
                 background-color: #FFBF00;
             }}
-            
+
             .order.gray {{
                 background-color: #d3d3d3;
             }}
-            
+
             .order.green {{
                 background-color: #90ee90;
-            }}
-
-            .order-item {{
-                margin-bottom: 4px;
-            }}
-
-            .addons-section {{
-                margin-top: 8px;
-            }}
-
-            .addon-header {{
-                font-weight: bold;
-                font-size: 13px;
-                margin-top: 6px;
-            }}
-
-            .addons {{
-                list-style: none;
-                padding-left: 12px;
-            }}
-
-            .note {{
-                font-weight: bold;
-                color: #0056b3;
-                font-size: 14px;
-                margin-left: 10px;
             }}
 
             /* =========================

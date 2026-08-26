@@ -150,14 +150,15 @@ def test_purse_addon_does_not_piggyback_onto_unrelated_shoe_in_same_order():
     table = report.tables[0]
     html = "".join(str(row) for row in table.rows)
 
-    # the tooltip (hover-only) legitimately still lists every addon on the
-    # order, including the purse -- only the always-visible <summary> row
-    # text is what must not be stamped with the unrelated purse's info
+    # the Order Details column legitimately still lists every addon on
+    # the order, including the purse -- only the display-text span (the
+    # shoe's own always-visible description) is what must not be stamped
+    # with the unrelated purse's info
     import re
-    summaries = re.findall(r"<summary>(.*?)</summary>", html)
+    display_texts = re.findall(r'<span class="display-text">(.*?)</span>', html)
 
-    assert any("papaya Fox" in s for s in summaries)
-    assert not any("Big Sky Mountains" in s for s in summaries)
+    assert any("papaya Fox" in s for s in display_texts)
+    assert not any("Big Sky Mountains" in s for s in display_texts)
 
 
 def test_wool_addon_still_piggybacks_onto_its_shoe():
@@ -414,3 +415,104 @@ def test_column_count_reflects_max_tables_argument():
 def test_empty_report_renders_nothing():
     report = Report()
     assert report.make(max_tables=4) == ""
+
+
+# ----------------------------------------
+# Report.make_flat() -- flat print-friendly Shoes layout
+# ----------------------------------------
+#
+# Regression tests for the print-whitespace/lost-notes complaint: the
+# Shoes report used to render as side-by-side tables inside a CSS grid
+# (via make()/get_grid_of_tables()), which printed with a lot of blank
+# space (a forced page break between report sections plus column-
+# balancing quirks) and hid every order's number/notes behind a
+# <details> that Chrome prints permanently closed. make_flat() instead
+# renders one flowing single-column table per (category, size-tier)
+# group, with the category/tier names in a <thead> so they reprint
+# automatically if a print page breaks partway through, and the order
+# number/product string/note always visible in their own column.
+
+def _shoe(order_num, category, size, prefix, display_text, note=None):
+    return OrderItem(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string=f"{category} Shoes - {size}",
+        order_num=order_num,
+        category=category,
+        size=size,
+        prefix=prefix,
+        display_text=display_text,
+        note=note,
+    )
+
+
+def test_make_flat_has_no_column_layout():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert "column-count" not in html
+    assert 'class="table-columns"' not in html
+
+
+def test_make_flat_repeats_category_and_tier_in_each_tables_thead():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.add_order(_shoe("1002", "Loafer", "10.5", "M", "chestnut"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    # two size tiers present (toddler + Men's) -> two separate <table>s,
+    # each carrying "Loafer" in its own <thead> so it reprints if that
+    # table's rows spill across a print page break
+    assert html.count("<thead>") == 2
+    assert html.count('class="table-title-row"><th colspan="3">Loafer</th>') == 2
+    assert 'class="table-subtitle-row"><th colspan="3">Men\'s</th>' in html
+
+
+def test_make_flat_toddler_only_category_has_no_subtitle_row():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.add_order(_shoe("1002", "Loafer", "8", None, "chestnut"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.count("<table>") == 1
+    assert "table-subtitle-row" not in html
+
+
+def test_make_flat_order_details_column_is_always_visible_not_a_details_element():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan", note="gift for a boy"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert "<details>" not in html
+    assert "<summary>" not in html
+    assert 'class="order-details"' in html
+    # the order number and note (previously hover-only) are now always
+    # visible in their own column, same content as get_tool_tip() already
+    # computed for the old tooltip -- just no longer hidden
+    assert "Order 1001" in html
+    assert "gift for a boy" in html
+
+
+def test_make_flat_ends_with_a_page_break_div():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.rstrip().endswith('<div class="page-break"></div>')
+
+
+def test_make_flat_on_report_with_no_orders_renders_nothing():
+    batch = Batch()
+    batch.__post_init__()
+
+    assert build_main_table_html(batch).make_flat() == ""
