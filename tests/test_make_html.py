@@ -5,7 +5,7 @@ Big Kids/Men's/Women's group-divider rows built on top of it.
 """
 
 from utility_modules import helper
-from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, get_bottoms_report, Table, _Divider
+from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, get_bottoms_report, Table, _Divider, Report
 from utility_modules.models import OrderItem, Addon, Batch
 
 
@@ -355,3 +355,62 @@ def test_bottoms_report_groups_missing_size_as_unknown():
 
     assert "Unknown" in labels
     assert table.rows[-1] == ["<b>Total</b>", "<b>3</b>"]
+
+
+# ----------------------------------------
+# Report.get_grid_of_tables / .make() -- table layout
+# ----------------------------------------
+#
+# Regression tests for the "one-row table surrounded by a big band of
+# blank space" complaint: a fixed row-by-row CSS grid stretches every
+# table in a row to match the tallest one sharing that row, so a short
+# table (e.g. a collection with a single order) leaves a lot of visible
+# blank space next to a much taller one. These confirm the report now
+# uses a CSS multi-column layout instead, where the next table simply
+# flows in underneath a short one within the same column.
+
+def _table(title, n_rows):
+    t = Table(title=title, columns=["Size", "Description"])
+    for i in range(n_rows):
+        t.add([str(i), "x"])
+    return t
+
+
+def test_report_uses_column_layout_not_a_fixed_grid():
+    report = Report()
+    report.add(_table("Lotus", 1))
+    report.add(_table("Designs", 8))
+
+    html = report.make(max_tables=4)
+
+    assert "column-count:4" in html
+    assert "display:grid" not in html
+    assert "grid-template-columns" not in html
+
+
+def test_every_table_gets_its_own_break_avoiding_block():
+    report = Report()
+    report.add(_table("Lotus", 1))
+    report.add(_table("Moccs", 2))
+    report.add(_table("Designs", 8))
+
+    html = report.make(max_tables=4)
+
+    # one table-block wrapper per table, not grouped into fixed-size rows
+    assert html.count('class="table-block"') == 3
+    assert html.count("<h1>Lotus</h1>") == 1
+    assert html.count("<h1>Moccs</h1>") == 1
+    assert html.count("<h1>Designs</h1>") == 1
+
+
+def test_column_count_reflects_max_tables_argument():
+    report = Report()
+    report.add(_table("Only One", 3))
+
+    assert "column-count:2" in report.make(max_tables=2)
+    assert "column-count:5" in report.make(max_tables=5)
+
+
+def test_empty_report_renders_nothing():
+    report = Report()
+    assert report.make(max_tables=4) == ""

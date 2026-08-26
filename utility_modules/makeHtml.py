@@ -45,9 +45,17 @@ class Table:
 @dataclass
 class Report:
     """
-    A collection of Tables rendered as a grid of side-by-side HTML tables,
-    splitting any table over max_rows into multiple same-titled tables
-    (chop()) and laying tables out max_tables-per-row (get_grid_of_tables()).
+    A collection of Tables rendered as side-by-side HTML tables, splitting
+    any table over max_rows into multiple same-titled tables (chop()) and
+    laying tables out max_tables columns wide (get_grid_of_tables()).
+
+    Tables flow top-to-bottom within each column via CSS multi-column
+    layout (column-count) rather than a fixed row-by-row grid, so a short
+    table (e.g. a collection with only one or two orders) doesn't force
+    a matching band of blank space next to it -- the next table just
+    stacks underneath it in the same column instead. See
+    get_grid_of_tables() and the .table-columns/.table-block CSS in
+    get_preamble().
     """
 
     title: str = ""
@@ -107,33 +115,28 @@ class Report:
 
         return "".join(html)
 
-    def chunk_tables(self, tables: list[Table], size: int = 5) -> list[list[Table]]:
-        return [
-            tables[i:i + size]
-            for i in range(0, len(tables), size)
-        ]
-
     def get_grid_of_tables(self, tables: list[Table], max_tables) -> str:
+        """
+        Lays every table out in a single max_tables-wide CSS multi-column
+        block (column-count), instead of chunking tables into fixed rows
+        of a grid. A fixed grid stretches every table in a row to match
+        the tallest one in that same row, leaving a lot of blank space
+        under a short table sitting next to a tall one; a CSS column
+        instead just flows the next table in underneath a short one,
+        within the same column, filling that space -- exactly the "stack
+        another table below it" behavior asked for, without needing to
+        hand-calculate table heights/row groupings in Python.
+        """
+
         if not tables:
             return ""
 
-        html = []
+        html = [f'<div class="table-columns" style="column-count:{max_tables};">']
 
-        for group in self.chunk_tables(tables, max_tables):
-            html.append(f"""
-            <div style="
-                display:grid;
-                grid-template-columns: repeat({max_tables}, 1fr);
-                gap:20px;
-                margin-bottom:20px;
-            ">
-            """)
+        for table in tables:
+            html.append(f'<div class="table-block">{self.make_html_table(table)}</div>')
 
-            for table in group:
-                html.append(f"<div>{self.make_html_table(table)}</div>")
-
-            html.append("</div>")
-
+        html.append("</div>")
         html.append('<div class="page-break"></div>')
 
         return "".join(html)
@@ -689,6 +692,23 @@ def get_preamble(date_range_text):
             tr.size-group-row {{
                 break-inside: avoid;
                 page-break-inside: avoid;
+            }}
+
+            /* =========================
+               TABLE COLUMN LAYOUT
+               (see Report.get_grid_of_tables())
+            ========================== */
+
+            .table-columns {{
+                column-gap: 20px;
+                margin-bottom: 20px;
+            }}
+
+            .table-block {{
+                break-inside: avoid;
+                page-break-inside: avoid;
+                -webkit-column-break-inside: avoid;
+                margin-bottom: 20px;
             }}
 
             /* =========================
