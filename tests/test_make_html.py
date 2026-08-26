@@ -4,6 +4,8 @@ row order within each collection's table on the report) and the
 Big Kids/Men's/Women's group-divider rows built on top of it.
 """
 
+import re
+
 from utility_modules import helper
 from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, get_bottoms_report, Table, _Divider, Report
 from utility_modules.models import OrderItem, Addon, Batch
@@ -426,13 +428,18 @@ def test_empty_report_renders_nothing():
 # (via make()/get_grid_of_tables()), which printed with a lot of blank
 # space (a forced page break between report sections plus column-
 # balancing quirks) and hid every order's number/notes behind a
-# <details> that Chrome prints permanently closed. make_flat() instead
-# renders the entire report as ONE continuous <table> -- category name
-# and size-tier label are both just in-body divider rows (not a <table>
-# each), since splitting into separate tables (tried first per tier,
-# then per category) left a visible gap of blank space between them on
-# a real print preview. The order number/product string/note are always
-# visible in their own column instead of behind a hover/click.
+# <details> that Chrome prints permanently closed. make_flat() renders
+# one <table class="flat-table"> per category (split again per size
+# tier), each with its own <thead> (category name + tier label + column
+# headers). Two earlier versions instead folded the category name and
+# tier label into in-body divider rows of one continuous table, because
+# separate tables had left a visible gap of blank space between them on
+# a real print preview -- but that traded away all per-page context on
+# a print page break. The gap traced back to generic CSS (a sitewide
+# `table {{ margin-bottom: 40px; }}` rule and default table-layout:auto),
+# not to using separate <table> elements -- see make_flat()'s docstring.
+# The order number/product string/note are always visible in their own
+# column instead of behind a hover/click.
 
 def _shoe(order_num, category, size, prefix, display_text, note=None):
     return OrderItem(
@@ -458,15 +465,12 @@ def test_make_flat_has_no_column_layout():
     assert 'class="table-columns"' not in html
 
 
-def test_make_flat_keeps_one_continuous_table_across_size_tiers():
+def test_make_flat_splits_into_one_table_per_size_tier():
     """
-    Regression test for the "table splits and adds whitespace between
-    Toddler and Big Kids" complaint: an earlier version split each size
-    tier into its own <table> so its label could sit in a <thead>, but
-    the border/margin between those tables left a visible gap on a real
-    print preview. A category with more than one tier must now stay one
-    single <table>, with the tier boundary as an in-body divider row
-    instead (same size-group-row markup the side-by-side reports use).
+    A category spanning more than one size tier now gets one <table
+    class="flat-table"> per tier, each carrying the tier label in its
+    own <thead> (so it reprints on a print page break), rather than
+    folding the tier boundary into an in-body row of one shared table.
     """
 
     batch = Batch()
@@ -476,20 +480,17 @@ def test_make_flat_keeps_one_continuous_table_across_size_tiers():
 
     html = build_main_table_html(batch).make_flat()
 
-    assert html.count("<table>") == 1
-    assert html.count("<thead>") == 1
+    assert html.count('class="flat-table"') == 2
+    assert html.count("<thead>") == 2
     assert 'class="size-group"' in html
     assert ">Men's<" in html
 
 
-def test_make_flat_keeps_one_continuous_table_across_categories():
+def test_make_flat_splits_into_one_table_per_category():
     """
-    Regression test for the same complaint one level up: after fixing
-    the tier split, category boundaries (Critters -> Loafer) still each
-    got their own <table>, leaving the identical gap between categories
-    instead. The whole report must render as a single <table>, with
-    each category name as its own in-body divider row (category-group-
-    row) rather than a new <table>/<thead> per category.
+    Same, one level up: Critters -> Loafer each get their own <table
+    class="flat-table">, with the category name in that table's own
+    <thead> so it reprints too.
     """
 
     batch = Batch()
@@ -499,14 +500,14 @@ def test_make_flat_keeps_one_continuous_table_across_categories():
 
     html = build_main_table_html(batch).make_flat()
 
-    assert html.count("<table>") == 1
-    assert html.count("<thead>") == 1
+    assert html.count('class="flat-table"') == 2
+    assert html.count("<thead>") == 2
     assert html.count('class="category-group"') == 2
     assert ">Critters<" in html
     assert ">Loafer<" in html
 
 
-def test_make_flat_toddler_only_category_has_no_divider_row():
+def test_make_flat_toddler_only_category_has_no_tier_subtitle_row():
     batch = Batch()
     batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
     batch.add_order(_shoe("1002", "Loafer", "8", None, "chestnut"))
@@ -514,8 +515,30 @@ def test_make_flat_toddler_only_category_has_no_divider_row():
 
     html = build_main_table_html(batch).make_flat()
 
-    assert html.count("<table>") == 1
+    assert html.count('class="flat-table"') == 1
     assert "size-group" not in html
+
+
+def test_make_flat_tables_share_matching_colgroup_widths():
+    """
+    The whole point of splitting into separate tables is that they read
+    as one continuous flow with no visible print gap -- which depends on
+    every table using the exact same column widths (table-layout:fixed +
+    a shared <colgroup>), not just visually similar ones.
+    """
+
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Critters", "2", None, "sahara Bear"))
+    batch.add_order(_shoe("1002", "Loafer", "6", None, "tan"))
+    batch.add_order(_shoe("1003", "Loafer", "10.5", "M", "chestnut"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.count('class="flat-table"') == 3
+    colgroups = re.findall(r"<colgroup>.*?</colgroup>", html)
+    assert len(colgroups) == 3
+    assert len(set(colgroups)) == 1
 
 
 def test_make_flat_order_details_column_is_always_visible_not_a_details_element():
