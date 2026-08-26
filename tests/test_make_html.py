@@ -535,6 +535,31 @@ def test_make_flat_order_details_column_is_always_visible_not_a_details_element(
     assert "gift for a boy" in html
 
 
+def test_make_flat_order_details_collapses_blank_lines_to_one_wrapped_line():
+    """
+    Regression test for a real print preview: a multi-paragraph note
+    (typed with its own blank lines) made the always-visible Order
+    Details column take up a lot of vertical room per row. It should
+    collapse to one flowing line (no embedded blank lines/newlines --
+    CSS wrapping handles the rest), while still keeping every word.
+    """
+
+    batch = Batch()
+    batch.add_order(_shoe(
+        "1001", "Loafer", "6", None, "tan",
+        note="Please make it in iron leather.\n\nSize 6, no sole.\n\nThank you!",
+    ))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    import re
+    details = re.search(r'<span class="order-details">(.*?)</span>', html).group(1)
+
+    assert "\n" not in details
+    assert "Please make it in iron leather. Size 6, no sole. Thank you!" in details
+
+
 def test_make_flat_ends_with_a_page_break_div():
     batch = Batch()
     batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))

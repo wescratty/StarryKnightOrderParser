@@ -275,7 +275,12 @@ def build_main_table_html(batch):
                         if add.add_type in piggyback_types:
                             display = f"{add.get_order_piggyback_display()}{display}"
 
-                tooltip = order.get_tool_tip(add_ons)
+                # get_tool_tip() keeps its blank-line paragraph breaks
+                # for the note text as typed (handy in a hover tooltip),
+                # but stacked in an always-visible column that eats a lot
+                # of vertical room -- collapsed to one flowing, wrapped
+                # line here instead, per the owner's request.
+                tooltip = " ".join(order.get_tool_tip(add_ons).split())
 
                 size_html = f"""
                      <button class="order " ">
@@ -283,7 +288,7 @@ def build_main_table_html(batch):
                     </button>
                 """
                 display_html = f'<span class="display-text">{display}</span>'
-                details_html = f'<pre class="order-details">{tooltip}</pre>'
+                details_html = f'<span class="order-details">{tooltip}</span>'
 
                 table.add([size_html, display_html, details_html])
 
@@ -723,11 +728,11 @@ def get_preamble(date_range_text):
             /* order number/raw product string/note -- always visible now
                instead of behind a <details> click/hover, which printed
                to paper as permanently closed and invisible */
-            pre.order-details {{
-                white-space: pre-wrap;
+            span.order-details {{
+                display: block;
                 word-break: break-word;
                 font-family: Arial, sans-serif;
-                font-size: 11px;
+                font-size: 9px;
                 margin: 0;
             }}
 
