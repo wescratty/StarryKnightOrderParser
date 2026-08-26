@@ -427,10 +427,12 @@ def test_empty_report_renders_nothing():
 # space (a forced page break between report sections plus column-
 # balancing quirks) and hid every order's number/notes behind a
 # <details> that Chrome prints permanently closed. make_flat() instead
-# renders one flowing single-column table per (category, size-tier)
-# group, with the category/tier names in a <thead> so they reprint
-# automatically if a print page breaks partway through, and the order
-# number/product string/note always visible in their own column.
+# renders the entire report as ONE continuous <table> -- category name
+# and size-tier label are both just in-body divider rows (not a <table>
+# each), since splitting into separate tables (tried first per tier,
+# then per category) left a visible gap of blank space between them on
+# a real print preview. The order number/product string/note are always
+# visible in their own column instead of behind a hover/click.
 
 def _shoe(order_num, category, size, prefix, display_text, note=None):
     return OrderItem(
@@ -456,7 +458,17 @@ def test_make_flat_has_no_column_layout():
     assert 'class="table-columns"' not in html
 
 
-def test_make_flat_repeats_category_and_tier_in_each_tables_thead():
+def test_make_flat_keeps_one_continuous_table_across_size_tiers():
+    """
+    Regression test for the "table splits and adds whitespace between
+    Toddler and Big Kids" complaint: an earlier version split each size
+    tier into its own <table> so its label could sit in a <thead>, but
+    the border/margin between those tables left a visible gap on a real
+    print preview. A category with more than one tier must now stay one
+    single <table>, with the tier boundary as an in-body divider row
+    instead (same size-group-row markup the side-by-side reports use).
+    """
+
     batch = Batch()
     batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
     batch.add_order(_shoe("1002", "Loafer", "10.5", "M", "chestnut"))
@@ -464,15 +476,37 @@ def test_make_flat_repeats_category_and_tier_in_each_tables_thead():
 
     html = build_main_table_html(batch).make_flat()
 
-    # two size tiers present (toddler + Men's) -> two separate <table>s,
-    # each carrying "Loafer" in its own <thead> so it reprints if that
-    # table's rows spill across a print page break
-    assert html.count("<thead>") == 2
-    assert html.count('class="table-title-row"><th colspan="3">Loafer</th>') == 2
-    assert 'class="table-subtitle-row"><th colspan="3">Men\'s</th>' in html
+    assert html.count("<table>") == 1
+    assert html.count("<thead>") == 1
+    assert 'class="size-group"' in html
+    assert ">Men's<" in html
 
 
-def test_make_flat_toddler_only_category_has_no_subtitle_row():
+def test_make_flat_keeps_one_continuous_table_across_categories():
+    """
+    Regression test for the same complaint one level up: after fixing
+    the tier split, category boundaries (Critters -> Loafer) still each
+    got their own <table>, leaving the identical gap between categories
+    instead. The whole report must render as a single <table>, with
+    each category name as its own in-body divider row (category-group-
+    row) rather than a new <table>/<thead> per category.
+    """
+
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Critters", "2", None, "sahara Bear"))
+    batch.add_order(_shoe("1002", "Loafer", "6", None, "tan"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.count("<table>") == 1
+    assert html.count("<thead>") == 1
+    assert html.count('class="category-group"') == 2
+    assert ">Critters<" in html
+    assert ">Loafer<" in html
+
+
+def test_make_flat_toddler_only_category_has_no_divider_row():
     batch = Batch()
     batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
     batch.add_order(_shoe("1002", "Loafer", "8", None, "chestnut"))
@@ -481,7 +515,7 @@ def test_make_flat_toddler_only_category_has_no_subtitle_row():
     html = build_main_table_html(batch).make_flat()
 
     assert html.count("<table>") == 1
-    assert "table-subtitle-row" not in html
+    assert "size-group" not in html
 
 
 def test_make_flat_order_details_column_is_always_visible_not_a_details_element():

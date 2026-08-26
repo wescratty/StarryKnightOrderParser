@@ -25,32 +25,6 @@ class _Divider:
         self.label = label
 
 
-def _split_by_divider(rows):
-    """
-    Splits a Table's rows list into (subtitle, data_rows) segments on its
-    _Divider markers -- subtitle is the preceding divider's label (or None
-    for the rows before the first divider, e.g. a toddler-only table with
-    no divider at all). Used by Report.make_flat() to turn each segment
-    into its own standalone <table>, so its title/subtitle can live in a
-    <thead> that repeats on a print page break -- see make_flat().
-    """
-
-    subtitle = None
-    current = []
-
-    for row in rows:
-        if isinstance(row, _Divider):
-            if current:
-                yield subtitle, current
-            subtitle = row.label
-            current = []
-        else:
-            current.append(row)
-
-    if current:
-        yield subtitle, current
-
-
 @dataclass
 class Table:
     """One HTML <table>: a title, column headers, and rows (each row a list of cell values, or a _Divider group label spanning the full row)."""
@@ -169,56 +143,58 @@ class Report:
 
     def make_flat(self) -> str:
         """
-        Renders every table as one flowing, single-column list of plain
-        HTML tables -- no side-by-side columns -- used for the main Shoes
-        report instead of get_grid_of_tables(). Each (category, size-tier)
-        group becomes its own standalone <table> via _split_by_divider(),
-        with the category name (and size-tier label, when the category
-        has more than one) inside a <thead> instead of a plain heading --
-        <thead> is what makes a browser automatically reprint that title
-        at the top of the next page if the table's rows spill across a
-        print page break, so "Loafer -- Big Kids" reappears if the page
-        breaks partway through that group instead of leaving the reader
-        to guess what they're looking at.
+        Renders every table into ONE continuous <table> -- no side-by-
+        side columns, and no separate <table> per category or per size-
+        tier either. Two earlier versions tried splitting on the tier
+        boundary, then the category boundary, so each one's title could
+        sit in its own <thead> and reprint automatically on a print page
+        break -- both times, the border/margin between those separate
+        tables left a visible gap of blank space (between tiers within
+        a category, then between categories themselves) on a real print
+        preview, which the owner flagged and asked to remove. Category
+        name and size-tier label are now both just in-body divider rows
+        (category-group-row / the existing size-group-row), so nothing
+        ever splits the table and there's no gap to create -- the
+        tradeoff is that neither one reprints on its own if a print page
+        happens to break in the middle of a category or tier; only the
+        Size/Description/Order Details column headers (the one <thead>
+        for the whole table) do that.
 
         This intentionally doesn't chop()/grid-layout tables the way
         make() does: a flowing single column paginates on its own in
         print, so there's no leftover-column whitespace to solve for.
         """
 
-        if not any(table.rows for table in self.tables):
+        tables_with_rows = [table for table in self.tables if table.rows]
+        if not tables_with_rows:
             return ""
 
-        html = []
+        columns = tables_with_rows[0].columns
 
-        for table in self.tables:
-            if not table.rows:
-                continue
+        html = ["<table>", "<thead>", "<tr>"]
+        html.extend(f"<th>{column}</th>" for column in columns)
+        html.append("</tr>")
+        html.append("</thead>")
 
-            for subtitle, rows in _split_by_divider(table.rows):
-                html.append("<table>")
-                html.append("<thead>")
-                html.append(
-                    f'<tr class="table-title-row"><th colspan="{len(table.columns)}">{table.title}</th></tr>'
-                )
-                if subtitle:
+        html.append("<tbody>")
+        for table in tables_with_rows:
+            html.append(
+                f'<tr class="category-group-row"><td class="category-group" colspan="{len(table.columns)}">{table.title}</td></tr>'
+            )
+
+            for row in table.rows:
+                if isinstance(row, _Divider):
                     html.append(
-                        f'<tr class="table-subtitle-row"><th colspan="{len(table.columns)}">{subtitle}</th></tr>'
+                        f'<tr class="size-group-row"><td class="size-group" colspan="{len(table.columns)}">{row.label}</td></tr>'
                     )
+                    continue
+
                 html.append("<tr>")
-                html.extend(f"<th>{column}</th>" for column in table.columns)
+                html.extend(f"<td>{value}</td>" for value in row)
                 html.append("</tr>")
-                html.append("</thead>")
+        html.append("</tbody>")
 
-                html.append("<tbody>")
-                for row in rows:
-                    html.append("<tr>")
-                    html.extend(f"<td>{value}</td>" for value in row)
-                    html.append("</tr>")
-                html.append("</tbody>")
-
-                html.append("</table>")
-
+        html.append("</table>")
         html.append('<div class="page-break"></div>')
 
         return "".join(html)
@@ -255,10 +231,9 @@ def build_main_table_html(batch):
     that's entirely Big Kids/Men's/Women's (no toddler sizes at all)
     still gets its one divider up front, though -- without it the sizes
     alone look just like toddler sizes and get mistaken for them. See
-    _should_show_divider(). Report.make_flat() turns each divider
-    boundary into its own <table> with the category name and tier label
-    in a <thead>, so "Loafer -- Big Kids" reprints automatically if a
-    print page breaks partway through that group.
+    _should_show_divider(). Report.make_flat() renders the whole report
+    as one continuous table, with both this tier divider and the
+    category name itself as in-body rows -- see its docstring for why.
     """
 
     report = Report("Shoes", max_rows=13)
@@ -726,25 +701,23 @@ def get_preamble(date_range_text):
                (see Report.make_flat() / build_main_table_html())
             ========================== */
 
-            /* category name -- <thead> so it reprints on a print page
-               break partway through this table, unlike a plain <h1> */
-            tr.table-title-row th {{
+            /* category name -- an in-body full-width divider row (like
+               size-group below, one level up) instead of a plain <h1>,
+               so the whole Shoes report stays one continuous <table>
+               with no per-category table border/margin to create a
+               visible gap between categories */
+            tr.category-group-row {{
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }}
+
+            td.category-group {{
                 background-color: #ffffff;
                 border: none;
                 text-align: left;
                 font-size: 20px;
                 font-weight: bold;
-                padding: 10px 0 4px 0;
-            }}
-
-            /* Big Kids/Men's/Women's tier label for this table, also in
-               the <thead> so it reprints alongside the category name */
-            tr.table-subtitle-row th {{
-                background-color: #333333;
-                color: #ffffff;
-                text-align: center;
-                font-weight: bold;
-                padding: 4px 6px;
+                padding: 14px 0 4px 0;
             }}
 
             /* order number/raw product string/note -- always visible now
