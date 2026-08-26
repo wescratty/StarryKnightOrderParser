@@ -4,8 +4,10 @@ row order within each collection's table on the report) and the
 Big Kids/Men's/Women's group-divider rows built on top of it.
 """
 
+import re
+
 from utility_modules import helper
-from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, get_bottoms_report, Table, _Divider
+from utility_modules.makeHtml import sort_size, get_size_tier, build_main_table_html, get_bottoms_report, Table, _Divider, Report
 from utility_modules.models import OrderItem, Addon, Batch
 
 
@@ -150,14 +152,15 @@ def test_purse_addon_does_not_piggyback_onto_unrelated_shoe_in_same_order():
     table = report.tables[0]
     html = "".join(str(row) for row in table.rows)
 
-    # the tooltip (hover-only) legitimately still lists every addon on the
-    # order, including the purse -- only the always-visible <summary> row
-    # text is what must not be stamped with the unrelated purse's info
+    # the Order Details column legitimately still lists every addon on
+    # the order, including the purse -- only the display-text span (the
+    # shoe's own always-visible description) is what must not be stamped
+    # with the unrelated purse's info
     import re
-    summaries = re.findall(r"<summary>(.*?)</summary>", html)
+    display_texts = re.findall(r'<span class="display-text">(.*?)</span>', html)
 
-    assert any("papaya Fox" in s for s in summaries)
-    assert not any("Big Sky Mountains" in s for s in summaries)
+    assert any("papaya Fox" in s for s in display_texts)
+    assert not any("Big Sky Mountains" in s for s in display_texts)
 
 
 def test_wool_addon_still_piggybacks_onto_its_shoe():
@@ -355,3 +358,268 @@ def test_bottoms_report_groups_missing_size_as_unknown():
 
     assert "Unknown" in labels
     assert table.rows[-1] == ["<b>Total</b>", "<b>3</b>"]
+
+
+# ----------------------------------------
+# Report.get_grid_of_tables / .make() -- table layout
+# ----------------------------------------
+#
+# Regression tests for the "one-row table surrounded by a big band of
+# blank space" complaint: a fixed row-by-row CSS grid stretches every
+# table in a row to match the tallest one sharing that row, so a short
+# table (e.g. a collection with a single order) leaves a lot of visible
+# blank space next to a much taller one. These confirm the report now
+# uses a CSS multi-column layout instead, where the next table simply
+# flows in underneath a short one within the same column.
+
+def _table(title, n_rows):
+    t = Table(title=title, columns=["Size", "Description"])
+    for i in range(n_rows):
+        t.add([str(i), "x"])
+    return t
+
+
+def test_report_uses_column_layout_not_a_fixed_grid():
+    report = Report()
+    report.add(_table("Lotus", 1))
+    report.add(_table("Designs", 8))
+    report.add(_table("Moccs", 2))
+    report.add(_table("Wovens", 4))
+
+    html = report.make(max_tables=4)
+
+    assert "column-count:4" in html
+    assert "display:grid" not in html
+    assert "grid-template-columns" not in html
+
+
+def test_every_table_gets_its_own_break_avoiding_block():
+    report = Report()
+    report.add(_table("Lotus", 1))
+    report.add(_table("Moccs", 2))
+    report.add(_table("Designs", 8))
+
+    html = report.make(max_tables=4)
+
+    # one table-block wrapper per table, not grouped into fixed-size rows
+    assert html.count('class="table-block"') == 3
+    assert html.count('<h1 class="table-title">Lotus</h1>') == 1
+    assert html.count('<h1 class="table-title">Moccs</h1>') == 1
+    assert html.count('<h1 class="table-title">Designs</h1>') == 1
+
+
+def test_column_count_reflects_max_tables_argument():
+    report = Report()
+    report.add(_table("A", 3))
+    report.add(_table("B", 3))
+    report.add(_table("C", 3))
+    report.add(_table("D", 3))
+    report.add(_table("E", 3))
+
+    assert "column-count:2" in report.make(max_tables=2)
+    assert "column-count:5" in report.make(max_tables=5)
+
+
+def test_column_count_is_capped_at_the_actual_number_of_tables():
+    """
+    Regression test for a real print preview: a report with only 1-2
+    tables asked for column-count:5 anyway, and the browser balanced
+    that table's height across all 5 columns (mostly empty ones) instead
+    of just using as many columns as there was content -- which read as
+    a lot of blank page. The column count should never exceed how many
+    tables there actually are.
+    """
+
+    report = Report()
+    report.add(_table("Bottoms", 5))
+
+    html = report.make(max_tables=5)
+
+    assert "column-count:1" in html
+    assert "column-count:5" not in html
+
+
+def test_empty_report_renders_nothing():
+    report = Report()
+    assert report.make(max_tables=4) == ""
+
+
+# ----------------------------------------
+# Report.make_flat() -- flat print-friendly Shoes layout
+# ----------------------------------------
+#
+# Regression tests for the print-whitespace/lost-notes complaint: the
+# Shoes report used to render as side-by-side tables inside a CSS grid
+# (via make()/get_grid_of_tables()), which printed with a lot of blank
+# space (a forced page break between report sections plus column-
+# balancing quirks) and hid every order's number/notes behind a
+# <details> that Chrome prints permanently closed. make_flat() renders
+# one <table class="flat-table"> per category (split again per size
+# tier), each with its own <thead> (category name + tier label + column
+# headers). Two earlier versions instead folded the category name and
+# tier label into in-body divider rows of one continuous table, because
+# separate tables had left a visible gap of blank space between them on
+# a real print preview -- but that traded away all per-page context on
+# a print page break. The gap traced back to generic CSS (a sitewide
+# `table {{ margin-bottom: 40px; }}` rule and default table-layout:auto),
+# not to using separate <table> elements -- see make_flat()'s docstring.
+# The order number/product string/note are always visible in their own
+# column instead of behind a hover/click.
+
+def _shoe(order_num, category, size, prefix, display_text, note=None):
+    return OrderItem(
+        time_stamp="2026-01-01 10:00:00",
+        original_order_string=f"{category} Shoes - {size}",
+        order_num=order_num,
+        category=category,
+        size=size,
+        prefix=prefix,
+        display_text=display_text,
+        note=note,
+    )
+
+
+def test_make_flat_has_no_column_layout():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert "column-count" not in html
+    assert 'class="table-columns"' not in html
+
+
+def test_make_flat_splits_into_one_table_per_size_tier():
+    """
+    A category spanning more than one size tier now gets one <table
+    class="flat-table"> per tier, each carrying the tier label in its
+    own <thead> (so it reprints on a print page break), rather than
+    folding the tier boundary into an in-body row of one shared table.
+    """
+
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.add_order(_shoe("1002", "Loafer", "10.5", "M", "chestnut"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.count('class="flat-table"') == 2
+    assert html.count("<thead>") == 2
+    assert 'class="size-group"' in html
+    assert ">Men's<" in html
+
+
+def test_make_flat_splits_into_one_table_per_category():
+    """
+    Same, one level up: Critters -> Loafer each get their own <table
+    class="flat-table">, with the category name in that table's own
+    <thead> so it reprints too.
+    """
+
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Critters", "2", None, "sahara Bear"))
+    batch.add_order(_shoe("1002", "Loafer", "6", None, "tan"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.count('class="flat-table"') == 2
+    assert html.count("<thead>") == 2
+    assert html.count('class="category-group"') == 2
+    assert ">Critters<" in html
+    assert ">Loafer<" in html
+
+
+def test_make_flat_toddler_only_category_has_no_tier_subtitle_row():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.add_order(_shoe("1002", "Loafer", "8", None, "chestnut"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.count('class="flat-table"') == 1
+    assert "size-group" not in html
+
+
+def test_make_flat_tables_share_matching_colgroup_widths():
+    """
+    The whole point of splitting into separate tables is that they read
+    as one continuous flow with no visible print gap -- which depends on
+    every table using the exact same column widths (table-layout:fixed +
+    a shared <colgroup>), not just visually similar ones.
+    """
+
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Critters", "2", None, "sahara Bear"))
+    batch.add_order(_shoe("1002", "Loafer", "6", None, "tan"))
+    batch.add_order(_shoe("1003", "Loafer", "10.5", "M", "chestnut"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.count('class="flat-table"') == 3
+    colgroups = re.findall(r"<colgroup>.*?</colgroup>", html)
+    assert len(colgroups) == 3
+    assert len(set(colgroups)) == 1
+
+
+def test_make_flat_order_details_column_is_always_visible_not_a_details_element():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan", note="gift for a boy"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert "<details>" not in html
+    assert "<summary>" not in html
+    assert 'class="order-details"' in html
+    # the order number and note (previously hover-only) are now always
+    # visible in their own column, same content as get_tool_tip() already
+    # computed for the old tooltip -- just no longer hidden
+    assert "Order 1001" in html
+    assert "gift for a boy" in html
+
+
+def test_make_flat_order_details_collapses_blank_lines_to_one_wrapped_line():
+    """
+    Regression test for a real print preview: a multi-paragraph note
+    (typed with its own blank lines) made the always-visible Order
+    Details column take up a lot of vertical room per row. It should
+    collapse to one flowing line (no embedded blank lines/newlines --
+    CSS wrapping handles the rest), while still keeping every word.
+    """
+
+    batch = Batch()
+    batch.add_order(_shoe(
+        "1001", "Loafer", "6", None, "tan",
+        note="Please make it in iron leather.\n\nSize 6, no sole.\n\nThank you!",
+    ))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    import re
+    details = re.search(r'<span class="order-details">(.*?)</span>', html).group(1)
+
+    assert "\n" not in details
+    assert "Please make it in iron leather. Size 6, no sole. Thank you!" in details
+
+
+def test_make_flat_ends_with_a_page_break_div():
+    batch = Batch()
+    batch.add_order(_shoe("1001", "Loafer", "6", None, "tan"))
+    batch.__post_init__()
+
+    html = build_main_table_html(batch).make_flat()
+
+    assert html.rstrip().endswith('<div class="page-break"></div>')
+
+
+def test_make_flat_on_report_with_no_orders_renders_nothing():
+    batch = Batch()
+    batch.__post_init__()
+
+    assert build_main_table_html(batch).make_flat() == ""

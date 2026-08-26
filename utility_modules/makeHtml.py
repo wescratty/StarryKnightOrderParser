@@ -45,9 +45,17 @@ class Table:
 @dataclass
 class Report:
     """
-    A collection of Tables rendered as a grid of side-by-side HTML tables,
-    splitting any table over max_rows into multiple same-titled tables
-    (chop()) and laying tables out max_tables-per-row (get_grid_of_tables()).
+    A collection of Tables rendered as side-by-side HTML tables, splitting
+    any table over max_rows into multiple same-titled tables (chop()) and
+    laying tables out max_tables columns wide (get_grid_of_tables()).
+
+    Tables flow top-to-bottom within each column via CSS multi-column
+    layout (column-count) rather than a fixed row-by-row grid, so a short
+    table (e.g. a collection with only one or two orders) doesn't force
+    a matching band of blank space next to it -- the next table just
+    stacks underneath it in the same column instead. See
+    get_grid_of_tables() and the .table-columns/.table-block CSS in
+    get_preamble().
     """
 
     title: str = ""
@@ -58,18 +66,32 @@ class Report:
         self.tables.append(table)
 
     def chop(self, table: Table) -> list[Table]:
+        """
+        Splits a table over max_rows into multiple same-titled chunks.
+        Chunk size is recomputed from how many chunks are actually needed
+        (ceil(rows / max_rows)), then rows are divided as evenly as
+        possible across that many chunks -- rather than filling every
+        chunk to max_rows and dumping whatever's left into a final
+        chunk, which produced oddly small leftover tables (a 23-row
+        table at max_rows=18 became an 18-row table plus a near-empty
+        5-row one, both titled the same, sitting side by side in the
+        print layout looking like a mistake). 23 rows now splits into a
+        12-row and an 11-row chunk instead.
+        """
+
         if len(table.rows) <= self.max_rows:
             return [table]
+
+        num_chunks = -(-len(table.rows) // self.max_rows)  # ceil division
+        chunk_size = -(-len(table.rows) // num_chunks)  # ceil division
 
         return [
             Table(
                 title=f"{table.title}",
                 columns=table.columns,
-                rows=table.rows[i:i + self.max_rows],
+                rows=table.rows[i:i + chunk_size],
             )
-            for idx, i in enumerate(
-                range(0, len(table.rows), self.max_rows)
-            )
+            for i in range(0, len(table.rows), chunk_size)
         ]
 
     def make(self, max_tables=5) -> str:
@@ -85,7 +107,7 @@ class Report:
         return self.get_grid_of_tables(parsed_tables, max_tables)
 
     def make_html_table(self, table: Table) -> str:
-        html = [f"<h1>{table.title}</h1>", "<table>", "<tr>"]
+        html = [f'<h1 class="table-title">{table.title}</h1>', "<table>", "<tr>"]
 
         # Header
         html.extend(f"<th>{column}</th>" for column in table.columns)
@@ -107,34 +129,156 @@ class Report:
 
         return "".join(html)
 
-    def chunk_tables(self, tables: list[Table], size: int = 5) -> list[list[Table]]:
-        return [
-            tables[i:i + size]
-            for i in range(0, len(tables), size)
-        ]
-
     def get_grid_of_tables(self, tables: list[Table], max_tables) -> str:
+        """
+        Lays every table out in a single max_tables-wide CSS multi-column
+        block (column-count), instead of chunking tables into fixed rows
+        of a grid. A fixed grid stretches every table in a row to match
+        the tallest one in that same row, leaving a lot of blank space
+        under a short table sitting next to a tall one; a CSS column
+        instead just flows the next table in underneath a short one,
+        within the same column, filling that space -- exactly the "stack
+        another table below it" behavior asked for, without needing to
+        hand-calculate table heights/row groupings in Python.
+
+        The column count is capped at however many tables there actually
+        are: asking for e.g. 5 columns when there are only 2 tables made
+        the browser spread those 2 tables across a 5-column-wide area
+        (column-fill balances height across every column whether or not
+        it has content), which read as a lot of empty page -- capping it
+        means a short report just gets as many columns as it has tables,
+        instead of empty columns it never needed.
+        """
+
         if not tables:
             return ""
 
+        column_count = max(1, min(max_tables, len(tables)))
+
+        html = [f'<div class="table-columns" style="column-count:{column_count};">']
+
+        for table in tables:
+            html.append(f'<div class="table-block">{self.make_html_table(table)}</div>')
+
+        html.append("</div>")
+        html.append('<div class="page-break"></div>')
+
+        return "".join(html)
+
+    def make_flat(self) -> str:
+        """
+        Renders the report as a run of same-width <table class="flat-
+        table"> elements -- one per category, split again at each size-
+        tier divider -- laid out so they read as one continuous flow with
+        no visible gap between them, while each one keeps its own <thead>
+        (category name + tier label + column headers) so that context
+        reprints automatically if a print page break happens to land
+        inside it (thead{{display:table-header-group}} in @media print).
+
+        Two earlier versions of this method tried exactly this (split on
+        the tier boundary, then split on the category boundary) and both
+        left a visible gap of blank space between consecutive tables on a
+        real print preview -- the owner flagged it and asked for one
+        continuous table instead, which is what shipped for a while. That
+        turned out to trade away *all* per-page context: a page break
+        mid-category left the next page's rows under a bare "Size /
+        Description / Order Details" header with no indication of which
+        category or size tier they belonged to. Investigating the gap
+        again (see the html_whitespace branch discussion), it traced back
+        to generic CSS -- the sitewide `table {{ margin-bottom: 40px; }}`
+        rule and default `table-layout: auto` -- rather than to using
+        separate <table> elements as such. `.flat-table` below zeroes the
+        margin and fixes each table's column widths (matching <colgroup>s
+        across every table), which removes the gap while keeping the
+        native per-table <thead> repeat. Chrome's print engine was
+        confirmed (via a throwaway prototype) to have no support for CSS
+        Paged Media running headers (@page margin-box `string-set`/
+        `content: string()`), so splitting into same-width tables is the
+        only way to get repeat-on-break context without a JS polyfill
+        like Paged.js.
+
+        This intentionally doesn't chop()/grid-layout tables the way
+        make() does: a flowing single column paginates on its own in
+        print, so there's no leftover-column whitespace to solve for.
+        """
+
+        tables_with_rows = [table for table in self.tables if table.rows]
+        if not tables_with_rows:
+            return ""
+
+        columns = tables_with_rows[0].columns
+        colgroup = "<colgroup>" + "".join(
+            f'<col class="col-{idx}">' for idx in range(len(columns))
+        ) + "</colgroup>"
+
         html = []
-
-        for group in self.chunk_tables(tables, max_tables):
-            html.append(f"""
-            <div style="
-                display:grid;
-                grid-template-columns: repeat({max_tables}, 1fr);
-                gap:20px;
-                margin-bottom:20px;
-            ">
-            """)
-
-            for table in group:
-                html.append(f"<div>{self.make_html_table(table)}</div>")
-
-            html.append("</div>")
+        for table in tables_with_rows:
+            for tier_table in self._split_by_tier(table):
+                html.append(self._make_flat_table_html(tier_table, colgroup, columns))
 
         html.append('<div class="page-break"></div>')
+
+        return "".join(html)
+
+    @staticmethod
+    def _split_by_tier(table: Table) -> list[Table]:
+        """
+        Splits one category Table into same-titled sub-tables at each
+        _Divider (tier boundary) it contains, dropping the _Divider rows
+        themselves -- the tier label they carried becomes that sub-
+        table's own title/subtitle instead of an in-body row. A table
+        with no dividers (the common toddler-only case) comes back as a
+        single-element list unchanged.
+        """
+
+        segments: list[Table] = []
+        current_label = None
+        current_rows: list[Any] = []
+
+        def flush():
+            if current_rows:
+                segments.append(Table(title=table.title, columns=table.columns, rows=list(current_rows)))
+                segments[-1].tier_label = current_label
+
+        for row in table.rows:
+            if isinstance(row, _Divider):
+                flush()
+                current_rows.clear()
+                current_label = row.label
+                continue
+            current_rows.append(row)
+        flush()
+
+        if not segments:
+            segments = [table]
+            segments[0].tier_label = None
+
+        return segments
+
+    @staticmethod
+    def _make_flat_table_html(table: Table, colgroup: str, columns: list[str]) -> str:
+        subtitle = getattr(table, "tier_label", None)
+
+        html = [f'<table class="flat-table">', colgroup, "<thead>"]
+        html.append(
+            f'<tr class="category-group-row"><td class="category-group" colspan="{len(columns)}">{table.title}</td></tr>'
+        )
+        if subtitle:
+            html.append(
+                f'<tr class="size-group-row"><td class="size-group" colspan="{len(columns)}">{subtitle}</td></tr>'
+            )
+        html.append("<tr>")
+        html.extend(f"<th>{column}</th>" for column in columns)
+        html.append("</tr>")
+        html.append("</thead>")
+
+        html.append("<tbody>")
+        for row in table.rows:
+            html.append("<tr>")
+            html.extend(f"<td>{value}</td>" for value in row)
+            html.append("</tr>")
+        html.append("</tbody>")
+        html.append("</table>")
 
         return "".join(html)
 
@@ -143,65 +287,23 @@ class Report:
 # Generic Table builder
 # ----------------------------
 
-def build_order_list_html(batch: Batch) -> str:
-    """Renders the per-order checklist view: one <li> per order, its shoes, and its add-ons."""
-
-    html = "<div class='report-section'>"
-    html += "<ul class='order-list'>"
-
-    order_dict = batch.get_orders()
-
-    for order_num, items in order_dict.items():
-        html += f"<li>"
-        html += f"<div class='order-header'>Order #{order_num}</div>"
-
-        html += "<ul class='order-items'>"
-
-        # Shoes / items
-        for item in items:
-            html += "<li class='order-item'>"
-            html += f"<span class='item-text'>{item.original_order_string}</span>"
-
-            if item.note:
-                html += f"<div class='note'>📝 {item.note}</div>"
-
-            html += "</li>"
-
-        # Add-ons
-        addons = batch.get_order_addon_items(order_num)
-        if addons:
-            html += "<li class='addons-section'>"
-            html += "<div class='addon-header'>Add-ons</div>"
-            html += "<ul class='addons'>"
-
-            for addon in addons:
-                html += "<li class='addon'>"
-                html += f"<span>{addon.display_text} × {addon.quantity}</span>"
-
-                if addon.note:
-                    html += f"<div class='note'>📝 {addon.note}</div>"
-
-                html += "</li>"
-
-            html += "</ul>"
-            html += "</li>"
-
-        html += "</ul>"
-        html += "</li>"
-
-    html += "</ul>"
-    html += "</div>"
-
-    return html
-
-
 def build_main_table_html(batch):
     """
     Builds the main "Shoes" report: one Table per category (see
-    helper.CATEGORY), one row per order item, sorted by size. Each row's
-    description is a collapsible <details> (see make_details_html())
-    showing the piggybacked add-on summary and the full tooltip on
-    expand/hover.
+    helper.CATEGORY), one row per order item, sorted by size, rendered
+    flat via Report.make_flat() -- Size | Description | Order Details,
+    with the order number, full raw Shopify product string, and any note
+    always visible in their own column instead of tucked behind a
+    collapsible <details>/hover. That collapsible version worked fine on
+    screen, but printed to paper it silently vanished: Chrome prints a
+    <details> in its default closed state, so every gift note and full
+    order string was invisible on the printed cut sheet without anyone
+    realizing it. Order Details reuses OrderItem.get_tool_tip(), the same
+    "Order {{num}}\\n{{product string}}\\n{{note}}\\n{{addon lines}}" text
+    the old hover tooltip already showed -- nothing new to compute, just
+    no longer hidden. This also makes the separate per-order checklist
+    view (the old build_order_list_html()) redundant, since every order's
+    full text is now sitting right here -- see export_orders_html().
 
     When a category's table mixes toddler sizes with Big Kids/Men's/
     Women's ones, a full-width group-divider row (e.g. "Big Kids") is
@@ -212,7 +314,10 @@ def build_main_table_html(batch):
     that's entirely Big Kids/Men's/Women's (no toddler sizes at all)
     still gets its one divider up front, though -- without it the sizes
     alone look just like toddler sizes and get mistaken for them. See
-    _should_show_divider().
+    _should_show_divider(). Report.make_flat() turns each tier divider
+    into its own same-titled sub-table (rather than an in-body row), so
+    both the category name and the tier label sit in that sub-table's own
+    <thead> and repeat on a print page break -- see its docstring for why.
     """
 
     report = Report("Shoes", max_rows=13)
@@ -221,7 +326,7 @@ def build_main_table_html(batch):
         cat_orders = batch.get_order_category(header)
 
         if len(cat_orders):
-            table = Table(header, ["Size", "Description"])
+            table = Table(header, ["Size", "Description", "Order Details"])
 
             sorted_orders = sorted(cat_orders, key=sort_size)
             tiers_present = {get_size_tier(o)[0] for o in sorted_orders}
@@ -233,8 +338,6 @@ def build_main_table_html(batch):
                 if _should_show_divider(tier, last_tier, tiers_present):
                     table.add_divider(label or "Other")
                     last_tier = tier
-
-                html = f"<div class='report-section'>"
 
                 size = order.size
                 display = order.get_display()
@@ -256,32 +359,25 @@ def build_main_table_html(batch):
                         if add.add_type in piggyback_types:
                             display = f"{add.get_order_piggyback_display()}{display}"
 
-                tooltip = order.get_tool_tip(add_ons)
+                # get_tool_tip() keeps its blank-line paragraph breaks
+                # for the note text as typed (handy in a hover tooltip),
+                # but stacked in an always-visible column that eats a lot
+                # of vertical room -- collapsed to one flowing, wrapped
+                # line here instead, per the owner's request.
+                tooltip = " ".join(order.get_tool_tip(add_ons).split())
 
                 size_html = f"""
                      <button class="order " ">
                         {size}
                     </button>
                 """
-                html += make_details_html(display, tooltip)
-                html += "</div>"
+                display_html = f'<span class="display-text">{display}</span>'
+                details_html = f'<span class="order-details">{tooltip}</span>'
 
-                table.add([size_html, html])
+                table.add([size_html, display_html, details_html])
 
             report.add(table=table)
     return report
-
-
-def make_details_html(main_display, tooltip):
-    """Wraps a row's display text and tooltip in a collapsible <details>/<summary> element."""
-
-    size_html = f'''
-                <details>
-                    <summary>{main_display}</summary>
-                    <pre>{tooltip}</pre>
-                </details>
-                '''
-    return size_html
 
 
 _SIZE_TIERS = {
@@ -419,21 +515,19 @@ def export_orders_html(batch: Batch, filename="orders.html"):
 
     html = get_preamble(date_range_text)
 
-    html += build_main_table_html(batch).make(4)
+    html += build_main_table_html(batch).make_flat()
 
     html += '''<h2>Bottoms</h2>'''
     bottoms_report = get_bottoms_report(orders)
-    html += bottoms_report.make(max_tables=5)
+    html += bottoms_report.make(max_tables=2)
 
     html += '''<h2>Leather Order</h2>'''
     size_report = get_leather_order(orders)
-    html += size_report.make(max_tables=5)
+    html += size_report.make(max_tables=3)
 
     add_report, addon_events = get_add_on_report(batch)
     user_notify_list.extend(addon_events)
     html += add_report.make(max_tables=2)
-
-    html += build_order_list_html(batch)
 
     html += """</body></html>"""
 
@@ -669,7 +763,7 @@ def get_preamble(date_range_text):
             }}
 
             th {{
-                background-color: #dddddd;
+                background-color: #D3D3D3;
             }}
 
             td {{
@@ -679,8 +773,8 @@ def get_preamble(date_range_text):
             /* Big Kids/Men's/Women's group-divider row -- see
                makeHtml.Table.add_divider() / _Divider */
             td.size-group {{
-                background-color: #333333;
-                color: #ffffff;
+                background-color: #D3D3D3;
+                color: #000000;
                 font-weight: bold;
                 text-align: center;
                 padding: 4px 6px;
@@ -689,6 +783,105 @@ def get_preamble(date_range_text):
             tr.size-group-row {{
                 break-inside: avoid;
                 page-break-inside: avoid;
+            }}
+
+            /* =========================
+               FLAT SHOES TABLE
+               (see Report.make_flat() / build_main_table_html())
+            ========================== */
+
+            /* One <table class="flat-table"> per category (split again
+               per size tier) instead of one continuous table, so each
+               one's own <thead> -- category name, tier label, column
+               headers -- reprints via thead{{display:table-header-group}}
+               (below, in @media print) if a page break lands inside it.
+               table-layout:fixed + the shared <colgroup> below keeps
+               every table's column widths identical, and margin:0
+               overrides the sitewide `table {{ margin-bottom: 40px; }}`
+               rule -- between them, consecutive tables read as one
+               continuous flow with no visible gap, which is what
+               actually caused the gap the owner flagged in the two
+               earlier attempts at this (not the use of separate <table>
+               elements itself). */
+            table.flat-table {{
+                table-layout: fixed;
+                margin: 0;
+            }}
+
+            table.flat-table col.col-0 {{
+                width: 8%;
+            }}
+
+            table.flat-table col.col-1 {{
+                width: 22%;
+            }}
+
+            table.flat-table col.col-2 {{
+                width: 70%;
+            }}
+
+            /* category name -- its own row inside each flat-table's
+               <thead>, so it repeats on a print page break */
+            tr.category-group-row {{
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }}
+
+            td.category-group {{
+                background-color: #ffffff;
+                border: none;
+                text-align: left;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 14px 0 0 0;
+            }}
+
+            /* order number/raw product string/note -- always visible now
+               instead of behind a <details> click/hover, which printed
+               to paper as permanently closed and invisible */
+            span.order-details {{
+                display: block;
+                word-break: break-word;
+                font-family: Arial, sans-serif;
+                font-size: 9px;
+                margin: 0;
+            }}
+
+            /* =========================
+               TABLE COLUMN LAYOUT
+               (see Report.get_grid_of_tables())
+            ========================== */
+
+            /* column-fill:auto instead of the default "balance" -- with
+               balance, the browser stretches content to fill every
+               column evenly by height even when only 1-2 columns
+               actually have tables in them, which is what made a short
+               report (e.g. Bottoms with just 2 table-blocks) look like a
+               lot of empty page. auto just fills column 1 top-to-bottom
+               before starting column 2, and get_grid_of_tables() now
+               also caps column-count at however many tables there are,
+               so a short report doesn't reserve columns it'll never use. */
+            .table-columns {{
+                column-gap: 20px;
+                column-fill: auto;
+                margin-bottom: 20px;
+            }}
+
+            .table-block {{
+                break-inside: avoid;
+                page-break-inside: avoid;
+                -webkit-column-break-inside: avoid;
+                margin-bottom: 20px;
+            }}
+
+            /* per-table title inside get_grid_of_tables() (Bottoms/
+               Leather Order/Add-ons) -- explicitly sized to match the
+               Shoes report's category-group text (16px) instead of
+               relying on the browser's default <h1> size (~2em), which
+               read as oversized next to the compact tables around it */
+            h1.table-title {{
+                font-size: 16px;
+                margin: 20px 0 6px 0;
             }}
 
             /* =========================
@@ -709,120 +902,41 @@ def get_preamble(date_range_text):
                 background-color: #f0f0f0;
             }}
 
-            li.has-note {{
-                font-weight: bold;
-                color: #0056b3;
-                font-size: 14px;
-            }}
-            div.has-note {{
-                font-weight: bold;
-                color: #0056b3;
-                font-size: 14px;
-            }}
-
             /* =========================
-               REPORT BLOCKS
+               CUT-PROGRESS MARKER BUTTON
+               (the clickable size button on each Shoes row -- see the
+               click-to-cycle-color <script> in get_preamble())
             ========================== */
-
-            .report-section {{
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }}
-
-            /* =========================
-               ORDER LIST VIEW
-            ========================== */
-
-            .order-list {{
-                list-style: none;
-                padding-left: 0;
-                font-size: 11px;
-            }}
 
             .order {{
                 border: 1px solid #ddd;
-                padding: 10px;
+                padding: 3px 6px;
                 margin-bottom: 0;
                 border-radius: 6px;
                 break-inside: avoid;
                 page-break-inside: avoid;
                 cursor: pointer;
                 width: 100%;
-                height: 25px;
+                height: 16px;
+                box-sizing: border-box;
                 display: flex;
                 align-items: center;
                 justify-content: center;
             }}
-            
-            .order.active {{
-                background: #ffff99;
-            }}
-            
-            .order.active::after {{
-                content: attr(data-tooltip);
-                white-space: pre-wrap;
-            
-                position: absolute;
-                top: 100%;
-                left: 0;
-            
-                z-index: 1000;
-            
-                background: white;
-                border: 1px solid black;
-                padding: 8px;
-                min-width: 250px;
-            }}
 
-            .order-header {{
-                font-weight: bold;
-                font-size: 14px;
-                margin-bottom: 6px;
-            }}
-
-            .order-items {{
-                list-style: none;
-                padding-left: 10px;
-            }}
             .order.red {{
                 background-color: #ff9999;
             }}
             .order.yellow {{
                 background-color: #FFBF00;
             }}
-            
+
             .order.gray {{
                 background-color: #d3d3d3;
             }}
-            
+
             .order.green {{
                 background-color: #90ee90;
-            }}
-
-            .order-item {{
-                margin-bottom: 4px;
-            }}
-
-            .addons-section {{
-                margin-top: 8px;
-            }}
-
-            .addon-header {{
-                font-weight: bold;
-                font-size: 13px;
-                margin-top: 6px;
-            }}
-
-            .addons {{
-                list-style: none;
-                padding-left: 12px;
-            }}
-
-            .note {{
-                font-weight: bold;
-                color: #0056b3;
-                font-size: 14px;
-                margin-left: 10px;
             }}
 
             /* =========================
@@ -832,7 +946,7 @@ def get_preamble(date_range_text):
             @media print {{
 
                 @page {{
-                    size: landscape;
+                    size: portrait;
                     margin: 0.5in;
                 }}
 
