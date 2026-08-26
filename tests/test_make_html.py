@@ -383,6 +383,8 @@ def test_report_uses_column_layout_not_a_fixed_grid():
     report = Report()
     report.add(_table("Lotus", 1))
     report.add(_table("Designs", 8))
+    report.add(_table("Moccs", 2))
+    report.add(_table("Wovens", 4))
 
     html = report.make(max_tables=4)
 
@@ -401,17 +403,40 @@ def test_every_table_gets_its_own_break_avoiding_block():
 
     # one table-block wrapper per table, not grouped into fixed-size rows
     assert html.count('class="table-block"') == 3
-    assert html.count("<h1>Lotus</h1>") == 1
-    assert html.count("<h1>Moccs</h1>") == 1
-    assert html.count("<h1>Designs</h1>") == 1
+    assert html.count('<h1 class="table-title">Lotus</h1>') == 1
+    assert html.count('<h1 class="table-title">Moccs</h1>') == 1
+    assert html.count('<h1 class="table-title">Designs</h1>') == 1
 
 
 def test_column_count_reflects_max_tables_argument():
     report = Report()
-    report.add(_table("Only One", 3))
+    report.add(_table("A", 3))
+    report.add(_table("B", 3))
+    report.add(_table("C", 3))
+    report.add(_table("D", 3))
+    report.add(_table("E", 3))
 
     assert "column-count:2" in report.make(max_tables=2)
     assert "column-count:5" in report.make(max_tables=5)
+
+
+def test_column_count_is_capped_at_the_actual_number_of_tables():
+    """
+    Regression test for a real print preview: a report with only 1-2
+    tables asked for column-count:5 anyway, and the browser balanced
+    that table's height across all 5 columns (mostly empty ones) instead
+    of just using as many columns as there was content -- which read as
+    a lot of blank page. The column count should never exceed how many
+    tables there actually are.
+    """
+
+    report = Report()
+    report.add(_table("Bottoms", 5))
+
+    html = report.make(max_tables=5)
+
+    assert "column-count:1" in html
+    assert "column-count:5" not in html
 
 
 def test_empty_report_renders_nothing():

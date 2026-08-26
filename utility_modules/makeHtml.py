@@ -66,18 +66,32 @@ class Report:
         self.tables.append(table)
 
     def chop(self, table: Table) -> list[Table]:
+        """
+        Splits a table over max_rows into multiple same-titled chunks.
+        Chunk size is recomputed from how many chunks are actually needed
+        (ceil(rows / max_rows)), then rows are divided as evenly as
+        possible across that many chunks -- rather than filling every
+        chunk to max_rows and dumping whatever's left into a final
+        chunk, which produced oddly small leftover tables (a 23-row
+        table at max_rows=18 became an 18-row table plus a near-empty
+        5-row one, both titled the same, sitting side by side in the
+        print layout looking like a mistake). 23 rows now splits into a
+        12-row and an 11-row chunk instead.
+        """
+
         if len(table.rows) <= self.max_rows:
             return [table]
+
+        num_chunks = -(-len(table.rows) // self.max_rows)  # ceil division
+        chunk_size = -(-len(table.rows) // num_chunks)  # ceil division
 
         return [
             Table(
                 title=f"{table.title}",
                 columns=table.columns,
-                rows=table.rows[i:i + self.max_rows],
+                rows=table.rows[i:i + chunk_size],
             )
-            for idx, i in enumerate(
-                range(0, len(table.rows), self.max_rows)
-            )
+            for i in range(0, len(table.rows), chunk_size)
         ]
 
     def make(self, max_tables=5) -> str:
@@ -93,7 +107,7 @@ class Report:
         return self.get_grid_of_tables(parsed_tables, max_tables)
 
     def make_html_table(self, table: Table) -> str:
-        html = [f"<h1>{table.title}</h1>", "<table>", "<tr>"]
+        html = [f'<h1 class="table-title">{table.title}</h1>', "<table>", "<tr>"]
 
         # Header
         html.extend(f"<th>{column}</th>" for column in table.columns)
@@ -126,12 +140,22 @@ class Report:
         within the same column, filling that space -- exactly the "stack
         another table below it" behavior asked for, without needing to
         hand-calculate table heights/row groupings in Python.
+
+        The column count is capped at however many tables there actually
+        are: asking for e.g. 5 columns when there are only 2 tables made
+        the browser spread those 2 tables across a 5-column-wide area
+        (column-fill balances height across every column whether or not
+        it has content), which read as a lot of empty page -- capping it
+        means a short report just gets as many columns as it has tables,
+        instead of empty columns it never needed.
         """
 
         if not tables:
             return ""
 
-        html = [f'<div class="table-columns" style="column-count:{max_tables};">']
+        column_count = max(1, min(max_tables, len(tables)))
+
+        html = [f'<div class="table-columns" style="column-count:{column_count};">']
 
         for table in tables:
             html.append(f'<div class="table-block">{self.make_html_table(table)}</div>')
@@ -495,11 +519,11 @@ def export_orders_html(batch: Batch, filename="orders.html"):
 
     html += '''<h2>Bottoms</h2>'''
     bottoms_report = get_bottoms_report(orders)
-    html += bottoms_report.make(max_tables=5)
+    html += bottoms_report.make(max_tables=2)
 
     html += '''<h2>Leather Order</h2>'''
     size_report = get_leather_order(orders)
-    html += size_report.make(max_tables=5)
+    html += size_report.make(max_tables=3)
 
     add_report, addon_events = get_add_on_report(batch)
     user_notify_list.extend(addon_events)
@@ -828,8 +852,18 @@ def get_preamble(date_range_text):
                (see Report.get_grid_of_tables())
             ========================== */
 
+            /* column-fill:auto instead of the default "balance" -- with
+               balance, the browser stretches content to fill every
+               column evenly by height even when only 1-2 columns
+               actually have tables in them, which is what made a short
+               report (e.g. Bottoms with just 2 table-blocks) look like a
+               lot of empty page. auto just fills column 1 top-to-bottom
+               before starting column 2, and get_grid_of_tables() now
+               also caps column-count at however many tables there are,
+               so a short report doesn't reserve columns it'll never use. */
             .table-columns {{
                 column-gap: 20px;
+                column-fill: auto;
                 margin-bottom: 20px;
             }}
 
@@ -838,6 +872,16 @@ def get_preamble(date_range_text):
                 page-break-inside: avoid;
                 -webkit-column-break-inside: avoid;
                 margin-bottom: 20px;
+            }}
+
+            /* per-table title inside get_grid_of_tables() (Bottoms/
+               Leather Order/Add-ons) -- explicitly sized to match the
+               Shoes report's category-group text (16px) instead of
+               relying on the browser's default <h1> size (~2em), which
+               read as oversized next to the compact tables around it */
+            h1.table-title {{
+                font-size: 16px;
+                margin: 20px 0 6px 0;
             }}
 
             /* =========================
