@@ -188,7 +188,7 @@ def test_wool_addon_still_piggybacks_onto_its_shoe():
     assert "🐑" in html
 
 
-def test_single_tier_table_gets_no_dividers():
+def test_single_tier_toddler_table_gets_no_dividers():
     # every item is a plain toddler size -- nothing to distinguish, so no
     # divider rows should be added at all
     items = [_order("2", None), _order("4", None), _order("6", None)]
@@ -201,4 +201,72 @@ def test_single_tier_table_gets_no_dividers():
 
     table = report.tables[0]
     dividers = [row for row in table.rows if isinstance(row, _Divider)]
+    assert dividers == []
+
+
+def test_big_kids_only_table_still_gets_its_divider():
+    """
+    Regression test: a table with ONLY Big Kids sizes (no toddler sizes
+    mixed in) used to get zero divider rows at all, since the old rule
+    only added one when a table mixed more than one tier. With nothing
+    labeling the table, the owner mistook it for a toddler-sized table --
+    the size numbers alone don't look any different. A Big Kids/Men's/
+    Women's-only table must always get its one divider up front now.
+    """
+
+    items = [_order("2", "Kids"), _order("2.5", "Kids"), _order("3", "Kids")]
+    for item in items:
+        item.category = "BELLA"
+        item.order_num = "1"
+
+    batch = _category_batch(items)
+    report = build_main_table_html(batch)
+
+    table = report.tables[0]
+    dividers = [row.label for row in table.rows if isinstance(row, _Divider)]
+    assert dividers == ["Big Kids"]
+
+
+def test_mens_only_table_still_gets_its_divider():
+    items = [_order("9", "M"), _order("10", "M"), _order("10.5", "M")]
+    for item in items:
+        item.category = "Loafer"
+        item.order_num = "1"
+
+    batch = _category_batch(items)
+    report = build_main_table_html(batch)
+
+    table = report.tables[0]
+    dividers = [row.label for row in table.rows if isinstance(row, _Divider)]
+    assert dividers == ["Men's"]
+
+
+def test_womens_only_table_still_gets_its_divider():
+    items = [_order("7", "W"), _order("8", "W")]
+    for item in items:
+        item.category = "Loafer"
+        item.order_num = "1"
+
+    batch = _category_batch(items)
+    report = build_main_table_html(batch)
+
+    table = report.tables[0]
+    dividers = [row.label for row in table.rows if isinstance(row, _Divider)]
+    assert dividers == ["Women's"]
+
+
+def test_no_size_at_all_does_not_get_a_forced_divider():
+    # every item has an unparseable/missing size (tier 99) -- a single
+    # uniform tier, same as the toddler-only case, must not get forced
+    # into always showing a divider the way Big Kids/M/W do
+    items = [_order(None, None), _order(None, None)]
+    for item in items:
+        item.category = "Loafer"
+        item.order_num = "1"
+
+    batch = _category_batch(items)
+    report = build_main_table_html(batch)
+
+    table = report.tables[0]
+    dividers = [row.label for row in table.rows if isinstance(row, _Divider)]
     assert dividers == []

@@ -206,8 +206,12 @@ def build_main_table_html(batch):
     Women's ones, a full-width group-divider row (e.g. "Big Kids") is
     inserted right before that group starts, so the size jump is obvious
     at a glance instead of just a size number that looks out of place --
-    per the owner's request. A single-tier table (the common case) gets no
-    dividers at all, since there's nothing to distinguish.
+    per the owner's request. A toddler-only table (the common case) gets
+    no dividers at all, since there's nothing to distinguish. A table
+    that's entirely Big Kids/Men's/Women's (no toddler sizes at all)
+    still gets its one divider up front, though -- without it the sizes
+    alone look just like toddler sizes and get mistaken for them. See
+    _should_show_divider().
     """
 
     report = Report("Shoes", max_rows=13)
@@ -225,7 +229,7 @@ def build_main_table_html(batch):
             for order in sorted_orders:
                 tier, label, _number = get_size_tier(order)
 
-                if len(tiers_present) > 1 and tier != last_tier:
+                if _should_show_divider(tier, last_tier, tiers_present):
                     table.add_divider(label or "Other")
                     last_tier = tier
 
@@ -285,6 +289,29 @@ _SIZE_TIERS = {
     "M": (2, "Men's"),
     "W": (3, "Women's"),
 }
+
+# Tiers that always get their own divider row, even when a table happens
+# to contain only that one tier -- otherwise a Big Kids/Men's/Women's-only
+# table shows no header at all, and since the size number alone looks
+# just like a toddler size, the owner has mistaken an all-adult table for
+# a toddler one. Toddler (0) and "no size at all" (99) are deliberately
+# left out -- a toddler-only table is the common case and needs no
+# header, and a lone unparseable size isn't a tier worth always labeling.
+_ALWAYS_LABEL_TIERS = {1, 2, 3}
+
+
+def _should_show_divider(tier, last_tier, tiers_present):
+    """
+    Shared divider-insertion rule for build_main_table_html() and
+    get_add_on_report(): show a divider when the tier just changed, and
+    either the table mixes more than one tier, or this tier is always
+    labeled regardless (see _ALWAYS_LABEL_TIERS).
+    """
+
+    if tier == last_tier:
+        return False
+
+    return len(tiers_present) > 1 or tier in _ALWAYS_LABEL_TIERS
 
 
 def get_size_tier(item):
@@ -445,7 +472,7 @@ def get_date_range(orders):
 
 
 def get_add_on_report(batch):
-    """Builds the add-ons Report (one Table per category/color grouping) and returns (report, events) -- events flags any order whose big runner size couldn't be inferred. Group-divider rows are inserted the same way as build_main_table_html() when a group (e.g. wool inserts) mixes toddler with Big Kids/Men's/Women's sizes."""
+    """Builds the add-ons Report (one Table per category/color grouping) and returns (report, events) -- events flags any order whose big runner size couldn't be inferred. Group-divider rows are inserted the same way as build_main_table_html() -- see _should_show_divider()."""
 
     add_ons_dict, events = batch.get_addon_categorized()
     add_report = Report(max_rows=15)
@@ -462,7 +489,7 @@ def get_add_on_report(batch):
         for add in sorted_adds:
             tier, label, _number = get_size_tier(add)
 
-            if len(tiers_present) > 1 and tier != last_tier:
+            if _should_show_divider(tier, last_tier, tiers_present):
                 table.add_divider(label or "Other")
                 last_tier = tier
 
