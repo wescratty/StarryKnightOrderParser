@@ -13,6 +13,16 @@ toolkit for future screens rather than removed as dead code.
 
 from tkinter import ttk
 import tkinter as tk
+import platform
+
+
+# macOS's Aqua theme won't let native Tk widgets (Button/Checkbutton/
+# Radiobutton) take a background fill via bg=/background= -- the widget
+# silently stays the system-default gray/white no matter what color is
+# passed in, or what format it's passed in (named color like "lime" or
+# hex like "#00FF00" both fail the same way). This is a longstanding,
+# widely documented Tk-on-Mac limitation, not a bug in this app.
+IS_MAC = platform.system() == "Darwin"
 
 
 class SuperTk:
@@ -264,6 +274,7 @@ class SuperTk:
             command=func
         )
         button.config(background=self.bg)
+        self._apply_mac_bg_workaround(button)
         self.store(button, 'button')
         return button
 
@@ -272,18 +283,37 @@ class SuperTk:
         Creates and returns radio button
         """
 
-        return self.store(
-            self.tk.Radiobutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, value=value, command=func),
-            'radio')
+        radio = self.tk.Radiobutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, value=value, command=func)
+        self._apply_mac_bg_workaround(radio)
+        return self.store(radio, 'radio')
 
     def get_check_box(self, frame, text, var, func):
         """
         Creates and returns checkbox
         """
 
-        return self.store(
-            self.tk.Checkbutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, onvalue=1, offvalue=0,
-                                command=func), 'ckeckbox')
+        checkbox = self.tk.Checkbutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, onvalue=1, offvalue=0,
+                                        command=func)
+        self._apply_mac_bg_workaround(checkbox)
+        return self.store(checkbox, 'ckeckbox')
+
+    def _apply_mac_bg_workaround(self, widget, bg=None):
+        """
+        macOS/Aqua blocks bg=/background= on native Button/Checkbutton/
+        Radiobutton widgets -- there's no supported way to fill the
+        widget's interior with a color. The commonly used zero-dependency
+        workaround (no extra pip package needed) is to color the widget's
+        highlight border instead, via highlightbackground/highlightthickness,
+        which Aqua does honor even though it ignores bg/background. On
+        Windows/Linux this is skipped entirely since bg/background already
+        work there -- calling this again there would be a no-op visually,
+        but skipping it keeps the existing look pixel-identical.
+        """
+
+        if not IS_MAC:
+            return
+
+        widget.config(highlightbackground=self.bg if bg is None else bg, highlightthickness=2)
 
     def get_invoked(self):
         """

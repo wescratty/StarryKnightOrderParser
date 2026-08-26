@@ -331,10 +331,11 @@ class OrderParser:
         # config/debug_mode.txt setting with something visible/toggleable
         # right here instead of a hidden file.
         self.archive_var = self.tk.tk.BooleanVar(value=True)
-        self.tk.tk.Checkbutton(
-            row, text="Archive", variable=self.archive_var,
-            bg=self.tk.bg, fg=self.tk.fg
-        ).pack(side=self.tk.tk.LEFT, padx=5)
+        # Built through SuperTk.get_check_box() (rather than a raw
+        # tk.Checkbutton call) so it picks up the same macOS background-
+        # color workaround as every other button/checkbox/radio button in
+        # the toolkit -- see SuperTk._apply_mac_bg_workaround().
+        self.tk.get_check_box(row, "Archive", self.archive_var, lambda: None).pack(side=self.tk.tk.LEFT, padx=5)
 
         if self.processed_time_stamp:
             self.search_text.insert(0, self.processed_time_stamp)
