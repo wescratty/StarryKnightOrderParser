@@ -25,6 +25,139 @@ import platform
 IS_MAC = platform.system() == "Darwin"
 
 
+class _MacButton(tk.Label):
+    """
+    macOS Aqua blocks bg/background on native tk.Button entirely, no
+    matter the color format ("lime" or "#00FF00" both fail the same way)
+    -- and the commonly cited highlightbackground/highlightthickness
+    "compromise" workaround was tried here and confirmed NOT to actually
+    change the button's fill color on current macOS/Tk either. tk.Label,
+    on the other hand, always respects bg/fg on Mac -- Aqua's restriction
+    is specific to interactive controls (Button/Checkbutton/Radiobutton),
+    not passive display widgets -- so on Mac, get_button() returns this
+    Label-based stand-in instead. It looks and behaves like a button
+    (raised border, hand cursor, a sunken look while pressed) and calls
+    `command` on a normal click-and-release inside its own bounds, same
+    as a real Button. Being a Label underneath also means later
+    .config(bg=...)/.config(fg=...) calls elsewhere in the app (e.g. the
+    "Set" button's green "unsaved change" highlight in
+    StarryKnightOrderParser.on_change) keep working on Mac too, which
+    native Button.config(bg=...) never did.
+    """
+
+    def __init__(self, master, text, command, width=45, height=2, bg=None, fg=None):
+        super().__init__(
+            master,
+            text=text,
+            width=width,
+            height=height,
+            bg=bg,
+            fg=fg,
+            relief=tk.RAISED,
+            borderwidth=2,
+            cursor='pointinghand',
+        )
+        self.command = command
+        self._pressed = False
+        self.bind('<ButtonPress-1>', self._on_press)
+        self.bind('<ButtonRelease-1>', self._on_release)
+
+    def _on_press(self, _event):
+        self._pressed = True
+        self.config(relief=tk.SUNKEN)
+
+    def _on_release(self, event):
+        was_pressed = self._pressed
+        self._pressed = False
+        self.config(relief=tk.RAISED)
+
+        # only fire if the mouse was released while still over this
+        # widget -- matches real Button behavior of not firing if the
+        # user drags off the button before releasing
+        inside = 0 <= event.x < self.winfo_width() and 0 <= event.y < self.winfo_height()
+        if was_pressed and inside and self.command:
+            self.command()
+
+
+class _MacCheckbox(tk.Label):
+    """
+    Same Aqua limitation as _MacButton, applied to Checkbutton: on Mac,
+    get_check_box() returns this Label-based stand-in instead of a native
+    tk.Checkbutton, so its bg/fg (and any later .config(bg=...) calls)
+    actually take effect. Shows a checkmark/empty-box glyph in front of
+    the label text in place of a real checkbox square.
+    """
+
+    _MARK_ON = "☑ "   # checked box
+    _MARK_OFF = "☐ "  # empty box
+
+    def __init__(self, master, text, var, command, bg=None, fg=None):
+        self.var = var
+        self._label_text = text
+        self._command = command
+        super().__init__(
+            master,
+            text=self._display_text(),
+            bg=bg,
+            fg=fg,
+            cursor='pointinghand',
+        )
+        self.bind('<Button-1>', self._on_click)
+
+    def _display_text(self):
+        mark = self._MARK_ON if self.var.get() else self._MARK_OFF
+        return mark + self._label_text
+
+    def _on_click(self, _event):
+        self.var.set(not self.var.get())
+        self.config(text=self._display_text())
+        if self._command:
+            self._command()
+
+
+class _MacRadioButton(tk.Label):
+    """
+    Same Aqua limitation, applied to Radiobutton. Not currently used by
+    the live app (see gen_lframe_of_rb's docstring), but kept consistent
+    with _MacButton/_MacCheckbox for whenever a screen does use it.
+    """
+
+    _MARK_ON = "◉ "   # filled circle
+    _MARK_OFF = "○ "  # empty circle
+
+    def __init__(self, master, text, var, value, command, bg=None, fg=None):
+        self.var = var
+        self.value = value
+        self._label_text = text
+        self._command = command
+        super().__init__(
+            master,
+            text=self._display_text(),
+            bg=bg,
+            fg=fg,
+            cursor='pointinghand',
+        )
+        self.bind('<Button-1>', self._on_click)
+
+        # keep this label in sync if the shared var changes from
+        # elsewhere (e.g. a sibling radio button in the same group
+        # being clicked instead of this one)
+        try:
+            self.var.trace_add('write', lambda *_: self.config(text=self._display_text()))
+        except Exception:
+            pass
+
+    def _display_text(self):
+        mark = self._MARK_ON if str(self.var.get()) == str(self.value) else self._MARK_OFF
+        return mark + self._label_text
+
+    def _on_click(self, _event):
+        self.var.set(self.value)
+        self.config(text=self._display_text())
+        if self._command:
+            self._command()
+
+
 class SuperTk:
     """Tkinter widget-building toolkit with a fixed dark (green-on-black) theme by default; see set_theme() to switch to light."""
 
@@ -262,58 +395,55 @@ class SuperTk:
 
     def get_button(self, frame, name, func, width=45, height=2):
         """
-        Creates and returns button
+        Creates and returns button. On macOS this is a Label-based
+        stand-in (_MacButton) instead of a native tk.Button -- see its
+        docstring for why.
         """
-        button = self.tk.Button(
-            frame,
-            text=name,
-            width=width,
-            height=height,
-            bg='#808080',
-            fg=self.fg,
-            command=func
-        )
-        button.config(background=self.bg)
-        self._apply_mac_bg_workaround(button)
+
+        if IS_MAC:
+            button = _MacButton(frame, text=name, command=func, width=width, height=height, bg=self.bg, fg=self.fg)
+        else:
+            button = self.tk.Button(
+                frame,
+                text=name,
+                width=width,
+                height=height,
+                bg='#808080',
+                fg=self.fg,
+                command=func
+            )
+            button.config(background=self.bg)
+
         self.store(button, 'button')
         return button
 
     def get_radio_button(self, frame, text, var, value, func):
         """
-        Creates and returns radio button
+        Creates and returns radio button. On macOS this is a Label-based
+        stand-in (_MacRadioButton) instead of a native tk.Radiobutton.
         """
 
-        radio = self.tk.Radiobutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, value=value, command=func)
-        self._apply_mac_bg_workaround(radio)
+        if IS_MAC:
+            radio = _MacRadioButton(frame, text=text, var=var, value=value, command=func, bg=self.bg, fg=self.fg)
+        else:
+            radio = self.tk.Radiobutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, value=value,
+                                         command=func)
+
         return self.store(radio, 'radio')
 
     def get_check_box(self, frame, text, var, func):
         """
-        Creates and returns checkbox
+        Creates and returns checkbox. On macOS this is a Label-based
+        stand-in (_MacCheckbox) instead of a native tk.Checkbutton.
         """
 
-        checkbox = self.tk.Checkbutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, onvalue=1, offvalue=0,
-                                        command=func)
-        self._apply_mac_bg_workaround(checkbox)
+        if IS_MAC:
+            checkbox = _MacCheckbox(frame, text=text, var=var, command=func, bg=self.bg, fg=self.fg)
+        else:
+            checkbox = self.tk.Checkbutton(frame, text=text, variable=var, bg=self.bg, fg=self.fg, onvalue=1,
+                                            offvalue=0, command=func)
+
         return self.store(checkbox, 'ckeckbox')
-
-    def _apply_mac_bg_workaround(self, widget, bg=None):
-        """
-        macOS/Aqua blocks bg=/background= on native Button/Checkbutton/
-        Radiobutton widgets -- there's no supported way to fill the
-        widget's interior with a color. The commonly used zero-dependency
-        workaround (no extra pip package needed) is to color the widget's
-        highlight border instead, via highlightbackground/highlightthickness,
-        which Aqua does honor even though it ignores bg/background. On
-        Windows/Linux this is skipped entirely since bg/background already
-        work there -- calling this again there would be a no-op visually,
-        but skipping it keeps the existing look pixel-identical.
-        """
-
-        if not IS_MAC:
-            return
-
-        widget.config(highlightbackground=self.bg if bg is None else bg, highlightthickness=2)
 
     def get_invoked(self):
         """
